@@ -62,7 +62,7 @@ jobs:
         run: uv run pytest --cov=src/banking_chat --cov-report=xml -v
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           file: coverage.xml
 
