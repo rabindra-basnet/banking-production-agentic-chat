@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from banking_chat.mcp_deployables.accounts_server.handlers import AccountsMCPHandlers
+from banking_chat.mcp.accounts.handlers import AccountsMCPHandlers
 
 
 @pytest.mark.asyncio
