@@ -5,12 +5,28 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
+from uuid import UUID
 
 
 class JSONFormatter(logging.Formatter):
     """Formats log records as structured JSON lines for enterprise SIEM ingestion."""
+
+    @staticmethod
+    def _normalize_value(val: Any) -> Any:
+        """Normalize complex context types (UUID, datetime, exceptions) into JSON-serializable primitives."""
+        if isinstance(val, (datetime, date)):
+            return val.isoformat()
+        if isinstance(val, UUID):
+            return str(val)
+        if isinstance(val, (int, float, bool, str)) or val is None:
+            return val
+        if isinstance(val, (list, tuple, set)):
+            return [JSONFormatter._normalize_value(x) for x in val]
+        if isinstance(val, dict):
+            return {str(k): JSONFormatter._normalize_value(v) for k, v in val.items()}
+        return str(val)
 
     def format(self, record: logging.LogRecord) -> str:
         log_obj: dict[str, Any] = {
@@ -25,15 +41,10 @@ class JSONFormatter(logging.Formatter):
             "thread": record.threadName,
         }
 
-        # Include custom context fields if attached
-        if hasattr(record, "request_id"):
-            log_obj["request_id"] = record.request_id
-        if hasattr(record, "session_id"):
-            log_obj["session_id"] = record.session_id
-        if hasattr(record, "customer_id"):
-            log_obj["customer_id"] = record.customer_id
-        if hasattr(record, "agent"):
-            log_obj["agent"] = record.agent
+        # Include and normalize custom context fields if attached
+        for field in ("request_id", "session_id", "customer_id", "agent"):
+            if hasattr(record, field):
+                log_obj[field] = self._normalize_value(getattr(record, field))
 
         if record.exc_info:
             log_obj["exception"] = self.formatException(record.exc_info)
