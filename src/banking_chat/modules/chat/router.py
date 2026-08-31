@@ -1,4 +1,4 @@
-"""FastAPI router endpoints for chat interactions, history, and health checks."""
+"""FastAPI router endpoints for chat interactions, authentication, history, and health checks."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, status
 
 from banking_chat.core.common.types import AuthenticatedUser
+from banking_chat.modules.auth.jwt_validator import JWTValidator
 from banking_chat.modules.auth.middleware import CurrentUser, get_current_user
+from banking_chat.modules.auth.models import RefreshTokenRequest, TokenResponse
 from banking_chat.modules.chat.graph import ChatPipeline
 from banking_chat.modules.chat.schemas import (
     ChatMessage,
@@ -19,9 +21,24 @@ from banking_chat.modules.chat.schemas import (
 )
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 
-router = APIRouter(tags=["Chat & Conversation"])
+router = APIRouter(tags=["Chat & Authentication"])
 memory_manager = ConversationMemoryManager()
 pipeline = ChatPipeline(memory_manager=memory_manager)
+jwt_validator = JWTValidator()
+
+
+@router.post(
+    "/auth/refresh",
+    response_model=TokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Refresh an expired access token using a valid refresh token",
+)
+async def refresh_token_endpoint(
+    payload: RefreshTokenRequest,
+) -> TokenResponse:
+    """Validate refresh token and issue a new access token and rotated refresh token."""
+    result = jwt_validator.refresh_access_token(payload.refresh_token)
+    return TokenResponse.model_validate(result)
 
 
 @router.post(
