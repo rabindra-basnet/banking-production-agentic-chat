@@ -104,6 +104,12 @@ docker-up: ## Start all services with Docker Compose
 docker-down: ## Stop all services
 	docker compose -f deploy/docker/docker-compose.yml down
 
+docker-infra-up: ## Start Postgres and Redis only with Docker Compose
+	docker compose -f deploy/docker/docker-compose.infra.yml up -d
+
+docker-infra-down: ## Stop Postgres and Redis only with Docker Compose
+	docker compose -f deploy/docker/docker-compose.infra.yml down
+
 podman-build: ## Build Podman image
 	podman build -f deploy/docker/Dockerfile -t banking-agentic-chat .
 
@@ -112,6 +118,12 @@ podman-up: ## Start all services with Podman Compose
 
 podman-down: ## Stop all services with Podman Compose
 	podman-compose -f deploy/docker/docker-compose.yml down
+
+podman-infra-up: ## Start Postgres and Redis only with Podman Compose
+	podman-compose -f deploy/docker/docker-compose.infra.yml up -d
+
+podman-infra-down: ## Stop Postgres and Redis only with Podman Compose
+	podman-compose -f deploy/docker/docker-compose.infra.yml down
 
 # ─── Cleanup ───
 
