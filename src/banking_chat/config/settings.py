@@ -40,8 +40,12 @@ class Settings(BaseSettings):
 
     # LLM: Third-Party
     llm_openai_api_key: str = Field(default="", description="OpenAI API key")
+    llm_openai_base_url: str = Field(
+        default="https://api.openai.com/v1", description="OpenAI API base URL (or compatible endpoint)"
+    )
     llm_openai_model: str = Field(default="gpt-4o", description="OpenAI model")
     llm_openai_max_tokens: int = Field(default=2048, description="Max tokens for OpenAI")
+    llm_openai_temperature: float = Field(default=0.2, description="Temperature for OpenAI")
 
     # Redis
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")

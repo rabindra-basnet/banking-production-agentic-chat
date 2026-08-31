@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 If you discover a security vulnerability, please report it responsibly:
 - **Do NOT** open a public GitHub issue
-- Email: security@example.com
+- Email: rabindrabasnet82@gmail.com
 - Include: description, reproduction steps, potential impact
 
 ## Security Measures

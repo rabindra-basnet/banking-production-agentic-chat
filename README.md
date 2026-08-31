@@ -59,26 +59,37 @@ make security-scan
 make format
 ```
 
-## Project Structure
-```
-src/banking_chat/
-├── api/              # FastAPI application and routes
-├── agents/           # AI agents (coordinator, accounts, transactions, services)
-├── mcp_servers/      # MCP servers wrapping bank APIs
-├── security/         # Authentication, authorization, PII redaction
-├── llm/              # LLM integration (self-hosted + third-party)
-├── session/          # Session and state management
-├── observability/    # Metrics, tracing, AI logging
-├── config/           # Configuration management
-└── common/           # Shared types, exceptions, utilities
-```
+## Project Structure & Code References
+
+| Subsystem | Source Path | Description |
+|---|---|---|
+| **API Layer** | [`src/banking_chat/api/`](src/banking_chat/api/) | FastAPI application factory, routes ([`chat.py`](src/banking_chat/api/routes/chat.py), [`health.py`](src/banking_chat/api/routes/health.py)), middleware |
+| **Agent Core** | [`src/banking_chat/agents/`](src/banking_chat/agents/) | Coordinator ([`coordinator/`](src/banking_chat/agents/coordinator/)), Accounts ([`accounts/`](src/banking_chat/agents/accounts/)), Transactions ([`transactions/`](src/banking_chat/agents/transactions/)), Services ([`services/`](src/banking_chat/agents/services/)) |
+| **MCP Servers** | [`src/banking_chat/mcp_servers/`](src/banking_chat/mcp_servers/) | Decoupled FastMCP tools for [Accounts](src/banking_chat/mcp_servers/accounts/), [Transactions](src/banking_chat/mcp_servers/transactions/), and [Services](src/banking_chat/mcp_servers/services/) |
+| **Security & PII** | [`src/banking_chat/security/`](src/banking_chat/security/) | [Authentication](src/banking_chat/security/authentication/), [RBAC](src/banking_chat/security/authorization/), Presidio [PII Redaction](src/banking_chat/security/pii/), and [Edge Protection](src/banking_chat/security/edge/) |
+| **LLM Routing** | [`src/banking_chat/llm/`](src/banking_chat/llm/) | Hybrid router ([`router.py`](src/banking_chat/llm/router.py)), [Self-Hosted](src/banking_chat/llm/self_hosted/), [Third-Party](src/banking_chat/llm/third_party/), and Cost Tracker ([`cost_tracker.py`](src/banking_chat/llm/cost_tracker.py)) |
+| **Session & State** | [`src/banking_chat/session/`](src/banking_chat/session/) | Redis state cache ([`redis_store.py`](src/banking_chat/session/redis_store.py)), conversation history ([`conversation.py`](src/banking_chat/session/conversation.py)), shared inter-agent state |
+| **Observability** | [`src/banking_chat/observability/`](src/banking_chat/observability/) | OpenTelemetry traces ([`tracing.py`](src/banking_chat/observability/tracing.py)), Prometheus metrics ([`metrics.py`](src/banking_chat/observability/metrics.py)), and AI logger |
+| **Configuration** | [`src/banking_chat/config/`](src/banking_chat/config/) | Pydantic Settings ([`settings.py`](src/banking_chat/config/settings.py)), Constants ([`constants.py`](src/banking_chat/config/constants.py)) |
+| **Common Schemas** | [`src/banking_chat/common/`](src/banking_chat/common/) | Domain types & models ([`types.py`](src/banking_chat/common/types.py)), exceptions ([`exceptions.py`](src/banking_chat/common/exceptions.py)), validators |
+
+## LLM Configuration (LangChain OpenAI / Compatible)
+
+All LLM parameters are strictly driven by environment variables via [`Settings`](src/banking_chat/config/settings.py):
+
+- **API Key**: `LLM_OPENAI_API_KEY`
+- **Base URL**: `LLM_OPENAI_BASE_URL` (supports standard OpenAI, Azure, Groq, OpenRouter, or local proxies)
+- **Model**: `LLM_OPENAI_MODEL` (e.g., `gpt-4o`, `llama3.1:8b`)
+- **Self-Hosted Base URL**: `LLM_SELF_HOSTED_BASE_URL` (vLLM / Ollama endpoint)
+- **Self-Hosted Model**: `LLM_SELF_HOSTED_MODEL`
 
 ## Documentation
 - [Architecture Overview](docs/architecture/overview.md)
 - [Step-by-Step Evolution](docs/architecture/step-by-step-evolution.md)
+- [Architecture Decision Records (ADRs)](docs/architecture/decisions/)
 - [Security Policy](SECURITY.md)
 - [Contributing](CONTRIBUTING.md)
-- [Learning Guides](docs/learning/)
+- [Learning Guides (Step 00 to 14)](docs/learning/)
 
 ## License
 MIT License — see [LICENSE](LICENSE) for details.
