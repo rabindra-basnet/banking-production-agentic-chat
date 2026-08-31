@@ -1,0 +1,21 @@
+# Production Gunicorn / Server Deployment Configuration
+# Environment overrides take precedence over file defaults
+
+server:
+  bind: "${GUNICORN_BIND:-0.0.0.0:8000}"
+  backlog: 2048
+  proc_name: "banking_chat_api"
+
+workers:
+  # When null or 0, dynamic CPU core calculation is applied (multiprocessing.cpu_count() * 2)
+  count: null
+  worker_class: "uvicorn.workers.UvicornWorker"
+  worker_connections: 1000
+  timeout: 120
+  keepalive: 5
+
+logging:
+  accesslog: "-"
+  errorlog: "-"
+  loglevel: "${GUNICORN_LOG_LEVEL:-info}"
+  capture_output: true

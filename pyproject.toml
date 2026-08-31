@@ -32,6 +32,7 @@ dependencies = [
     "prometheus-client>=0.21.0",
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.12",
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,7 @@ dev = [
     "bandit>=1.8.0",
     "pre-commit>=4.0.0",
     "types-redis>=4.6.0",
+    "types-pyyaml>=6.0.12.20240917",
     "deepeval>=1.0.0",
     "faker>=33.0.0",
 ]
