@@ -148,7 +148,7 @@ markers = [
 # ─── Bandit ───
 [tool.bandit]
 targets = ["src"]
-skips = ["B101", "B104", "B105", "B110", "B404", "B603"]
+skips = ["B101", "B104", "B105", "B110"]
 
 # ─── Coverage ───
 [tool.coverage.run]

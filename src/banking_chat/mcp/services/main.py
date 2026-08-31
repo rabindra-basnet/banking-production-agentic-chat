@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 
 from banking_chat.core.config.logging_config import setup_logging
 from banking_chat.core.config.settings import get_settings
@@ -44,8 +45,15 @@ async def block_card(
     )
 
 
-# Export the Streamable HTTP ASGI Starlette app
-app = mcp_server.streamable_http_app()
+# Configure Transport Security allowing container service-name routing in Docker/Podman/K8s
+transport_security = TransportSecuritySettings(
+    allowed_hosts=["*"],
+    allowed_origins=["*"],
+    enable_dns_rebinding_protection=False,
+)
+
+# Export the Streamable HTTP ASGI Starlette app with security settings
+app = mcp_server.streamable_http_app(transport_security=transport_security)
 
 
 def run_server() -> None:
