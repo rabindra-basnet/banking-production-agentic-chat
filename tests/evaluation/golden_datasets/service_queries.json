@@ -1,0 +1,22 @@
+{
+  "dataset_name": "service_requests",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "SVC-001",
+      "input": "I want to order a cheque book",
+      "expected_agent": "service_agent",
+      "expected_tools": ["request_cheque_book"],
+      "category": "happy_path",
+      "priority": "P0"
+    },
+    {
+      "id": "SVC-002",
+      "input": "I lost my debit card, please block it immediately",
+      "expected_agent": "service_agent",
+      "expected_tools": ["block_card"],
+      "category": "emergency",
+      "priority": "P0"
+    }
+  ]
+}

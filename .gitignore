@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+
+# Security
+.secrets.baseline
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# UV
+.python-version

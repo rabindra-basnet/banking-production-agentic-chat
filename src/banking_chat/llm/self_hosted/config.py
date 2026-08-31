@@ -1,0 +1,1 @@
+"""Self-hosted LLM configuration."""

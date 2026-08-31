@@ -1,0 +1,23 @@
+{
+  "dataset_name": "balance_inquiries",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "BAL-001",
+      "input": "What's my account balance?",
+      "expected_agent": "accounts_agent",
+      "expected_tools": ["get_account_balance"],
+      "expected_response_contains": ["balance", "₹"],
+      "category": "happy_path",
+      "priority": "P0"
+    },
+    {
+      "id": "BAL-002",
+      "input": "Show me the balance of all my accounts",
+      "expected_agent": "accounts_agent",
+      "expected_tools": ["list_customer_accounts"],
+      "category": "happy_path",
+      "priority": "P0"
+    }
+  ]
+}

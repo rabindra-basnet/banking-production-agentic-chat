@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info:
+  title: Banking Agentic Chat API
+  description: Production-grade AI-powered banking customer support chatbot
+  version: 0.1.0
+paths: {}

@@ -1,0 +1,23 @@
+# Default owners
+*                                       @rabindra-basnet
+
+# Agent modules
+/src/banking_chat/agents/               @rabindra-basnet
+/src/banking_chat/llm/                  @rabindra-basnet
+
+# MCP Servers
+/src/banking_chat/mcp_servers/          @rabindra-basnet
+
+# Security
+/src/banking_chat/security/             @rabindra-basnet
+/tests/security/                        @rabindra-basnet
+
+# API Layer
+/src/banking_chat/api/                  @rabindra-basnet
+
+# Infrastructure
+/deploy/                                @rabindra-basnet
+/.github/                               @rabindra-basnet
+
+# Evaluation
+/tests/evaluation/                      @rabindra-basnet

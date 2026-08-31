@@ -1,0 +1,14 @@
+{
+  "dataset_name": "edge_cases",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "EDGE-001",
+      "input": "Get me my balance along with the last 5 transactions",
+      "expected_agent": "coordinator_agent",
+      "expected_tools": ["get_account_balance", "get_recent_transactions"],
+      "category": "multi_agent",
+      "priority": "P0"
+    }
+  ]
+}

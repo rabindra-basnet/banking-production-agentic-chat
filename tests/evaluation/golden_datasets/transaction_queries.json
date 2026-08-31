@@ -1,0 +1,22 @@
+{
+  "dataset_name": "transaction_inquiries",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "id": "TXN-001",
+      "input": "Show me my last 5 transactions",
+      "expected_agent": "transaction_agent",
+      "expected_tools": ["get_recent_transactions"],
+      "category": "happy_path",
+      "priority": "P0"
+    },
+    {
+      "id": "TXN-002",
+      "input": "What was that debit of 5000 rupees yesterday?",
+      "expected_agent": "transaction_agent",
+      "expected_tools": ["search_transactions"],
+      "category": "happy_path",
+      "priority": "P0"
+    }
+  ]
+}
