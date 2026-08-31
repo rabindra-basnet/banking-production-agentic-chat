@@ -25,7 +25,9 @@ class Settings(BaseSettings):
 
     # Authentication
     auth_idp_issuer: str = Field(default="https://idp.bank.com/realms/banking", description="IdP issuer URL")
-    auth_idp_jwks_url: str = Field(default="https://idp.bank.com/realms/banking/protocol/openid-connect/certs", description="JWKS URL")
+    auth_idp_jwks_url: str = Field(
+        default="https://idp.bank.com/realms/banking/protocol/openid-connect/certs", description="JWKS URL"
+    )
     auth_idp_client_id: str = Field(default="banking-chat-app", description="OAuth2 client ID")
     auth_jwt_algorithm: str = Field(default="RS256", description="JWT algorithm")
     auth_token_expiry_minutes: int = Field(default=30, description="Token expiry in minutes")
@@ -46,7 +48,9 @@ class Settings(BaseSettings):
     redis_session_ttl_seconds: int = Field(default=1800, description="Session TTL (30 min)")
 
     # PostgreSQL
-    database_url: str = Field(default="postgresql+asyncpg://postgres:postgres@localhost:5432/banking_chat", description="Database URL")
+    database_url: str = Field(
+        default="postgresql+asyncpg://postgres:postgres@localhost:5432/banking_chat", description="Database URL"
+    )
 
     # MCP Servers
     mcp_accounts_url: str = Field(default="http://localhost:9001", description="Accounts MCP server URL")

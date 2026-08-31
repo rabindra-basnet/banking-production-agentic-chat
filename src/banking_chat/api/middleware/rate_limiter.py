@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 class RateLimiterMiddleware(BaseHTTPMiddleware):
     """Redis-based rate limiter with tier-based limits."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Check rate limits before processing request."""
         # TODO: Implement Redis token bucket (Phase 3 - Step 14)
         return await call_next(request)

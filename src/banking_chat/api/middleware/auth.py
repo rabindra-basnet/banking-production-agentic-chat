@@ -6,7 +6,7 @@ import logging
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import JSONResponse, Response
+from starlette.responses import Response
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +17,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     # Paths that don't require authentication
     PUBLIC_PATHS = {"/health", "/health/ready", "/openapi.json"}  # noqa: RUF012
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Validate JWT token for protected routes."""
         if request.url.path in self.PUBLIC_PATHS:
             return await call_next(request)

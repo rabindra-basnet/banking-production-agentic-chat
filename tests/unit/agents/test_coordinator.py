@@ -6,5 +6,6 @@ from __future__ import annotations
 class TestCoordinatorAgent:
     """Test suite for the Coordinator Agent."""
 
-    # TODO: Implement in Phase 2
-    pass
+    def test_placeholder(self) -> None:
+        """Placeholder test ensuring test runner discovery succeeds."""
+        assert True

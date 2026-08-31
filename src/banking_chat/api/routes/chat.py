@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -30,7 +31,7 @@ async def chat(
 @router.get("/chat/history/{session_id}")
 async def get_chat_history(
     session_id: UUID,
-) -> dict:
+) -> dict[str, Any]:
     """Retrieve conversation history for a session."""
     # TODO: Implement (Phase 4)
     raise HTTPException(status_code=501, detail="Not yet implemented")

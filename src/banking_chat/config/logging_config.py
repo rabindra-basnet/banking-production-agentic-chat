@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
 
 
 def setup_logging(log_level: str = "INFO", json_output: bool = False) -> None:

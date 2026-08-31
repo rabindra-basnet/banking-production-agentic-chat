@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -21,7 +21,7 @@ def standard_user() -> AuthenticatedUser:
         tier=CustomerTier.STANDARD,
         accounts=["XXXXXXXXXXXX1234", "XXXXXXXXXXXX5678"],
         session_id=uuid4(),
-        token_expiry=datetime(2026, 12, 31, tzinfo=timezone.utc),
+        token_expiry=datetime(2026, 12, 31, tzinfo=UTC),
     )
 
 
@@ -36,7 +36,7 @@ def premium_user() -> AuthenticatedUser:
         tier=CustomerTier.PREMIUM,
         accounts=["XXXXXXXXXXXX9012"],
         session_id=uuid4(),
-        token_expiry=datetime(2026, 12, 31, tzinfo=timezone.utc),
+        token_expiry=datetime(2026, 12, 31, tzinfo=UTC),
     )
 
 
@@ -51,5 +51,5 @@ def privileged_user() -> AuthenticatedUser:
         tier=CustomerTier.PRIVILEGED,
         accounts=["XXXXXXXXXXXX3456", "XXXXXXXXXXXX7890", "XXXXXXXXXXXX2345"],
         session_id=uuid4(),
-        token_expiry=datetime(2026, 12, 31, tzinfo=timezone.utc),
+        token_expiry=datetime(2026, 12, 31, tzinfo=UTC),
     )

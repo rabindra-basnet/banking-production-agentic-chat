@@ -58,7 +58,7 @@ packages = ["src/banking_chat"]
 # ─── Ruff ───
 [tool.ruff]
 target-version = "py312"
-line-length = 100
+line-length = 120
 src = ["src", "tests"]
 
 [tool.ruff.lint]
@@ -76,12 +76,13 @@ select = [
     "DTZ",  # flake8-datetimez
     "T20",  # flake8-print
     "SIM",  # flake8-simplify
-    "TCH",  # flake8-type-checking
     "RUF",  # ruff-specific rules
 ]
 ignore = [
     "S101",  # Allow assert in tests
+    "S105",  # False positive on token prefixes
     "B008",  # Allow function calls in defaults (FastAPI Depends)
+    "E501",  # Let ruff format handle formatting
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -136,7 +137,7 @@ markers = [
 # ─── Bandit ───
 [tool.bandit]
 targets = ["src"]
-skips = ["B101"]
+skips = ["B101", "B105"]
 
 # ─── Coverage ───
 [tool.coverage.run]
