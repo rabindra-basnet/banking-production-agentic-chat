@@ -1,6 +1,6 @@
 """Production Gunicorn Configuration Loader for Banking Production Agentic Chat.
 
-Loads runtime deployment parameters from `deploy/docker/gunicorn.yaml` with environment variable overrides.
+Loads runtime deployment parameters from `deploy/docker/gunicorn.yaml` (or custom path via `GUNICORN_YAML_CONFIG`) with environment variable overrides.
 """
 
 from __future__ import annotations
@@ -12,8 +12,9 @@ from typing import Any
 
 import yaml
 
-# Path to YAML config file
-YAML_PATH = Path(__file__).parent / "gunicorn.yaml"
+# Determine path to YAML config file (defaults to deploy/docker/gunicorn.yaml relative to project root)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+YAML_PATH = Path(os.getenv("GUNICORN_YAML_CONFIG", str(PROJECT_ROOT / "deploy" / "docker" / "gunicorn.yaml")))
 
 # Default configuration values
 cfg: dict[str, Any] = {

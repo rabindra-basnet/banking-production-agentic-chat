@@ -35,4 +35,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-CMD ["uv", "run", "gunicorn", "banking_chat.main:app", "-c", "deploy/docker/gunicorn_conf.py"]
+CMD ["uv", "run", "gunicorn", "banking_chat.main:app", "-c", "python:banking_chat.gunicorn_conf"]

@@ -82,7 +82,7 @@ run: ## Run the chat application (development)
 	uv run uvicorn banking_chat.main:app --reload --host 0.0.0.0 --port 8000
 
 run-prod: ## Run the chat application (production with Gunicorn + Uvicorn workers)
-	uv run gunicorn banking_chat.main:app -c deploy/docker/gunicorn_conf.py
+	uv run gunicorn banking_chat.main:app -c python:banking_chat.gunicorn_conf
 
 run-mcp-accounts: ## Run Accounts FastMCP standalone server (port 9001)
 	uv run python src/banking_chat/mcp/accounts/main.py
