@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from banking_chat.mcp.transactions_server.handlers import TransactionsMCPHandlers
+from banking_chat.mcp_deployables.transactions_server.handlers import TransactionsMCPHandlers
 
 app = FastAPI(title="Banking Transactions MCP Server", version="0.1.0")
 handlers = TransactionsMCPHandlers()
@@ -30,13 +30,15 @@ class SpendingSummaryPayload(BaseModel):
 @app.post("/tools/get_transactions")
 async def get_transactions_tool(payload: TransactionsRequest) -> dict[str, Any]:
     """MCP tool endpoint: get_transactions."""
-    return await handlers.get_transactions(payload.customer_id, payload.query)
+    res: dict[str, Any] = await handlers.get_transactions(payload.customer_id, payload.query)
+    return res
 
 
 @app.post("/tools/get_spending_summary")
 async def get_spending_summary_tool(payload: SpendingSummaryPayload) -> dict[str, Any]:
     """MCP tool endpoint: get_spending_summary."""
-    return await handlers.get_spending_summary(payload.customer_id, payload.days)
+    res: dict[str, Any] = await handlers.get_spending_summary(payload.customer_id, payload.days)
+    return res
 
 
 @app.get("/health")

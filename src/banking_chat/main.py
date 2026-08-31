@@ -59,11 +59,36 @@ app = create_app()
 
 
 def start() -> None:
-    """Entry point for running the API server."""
+    """Entry point for running the API server in development mode."""
     import uvicorn
 
     settings = get_settings()
     uvicorn.run("banking_chat.main:app", host="0.0.0.0", port=settings.app_port, reload=True)
+
+
+def start_prod() -> None:
+    """Entry point for running the API server in production with Gunicorn + Uvicorn workers."""
+    import subprocess
+    import sys
+
+    settings = get_settings()
+    cmd = [
+        sys.executable,
+        "-m",
+        "gunicorn",
+        "banking_chat.main:app",
+        "-w",
+        "4",
+        "-k",
+        "uvicorn.workers.UvicornWorker",
+        "-b",
+        f"0.0.0.0:{settings.app_port}",
+        "--access-logfile",
+        "-",
+        "--error-logfile",
+        "-",
+    ]
+    subprocess.run(cmd, check=True)  # noqa: S603
 
 
 if __name__ == "__main__":
