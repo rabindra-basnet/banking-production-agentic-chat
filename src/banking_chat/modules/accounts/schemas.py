@@ -5,23 +5,19 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
-from banking_chat.core.common.types import BankAccount
+from banking_chat.core.common.types import BankAccount, StrictBaseModel
 
 
-class AccountBalanceRequest(BaseModel):
+class AccountBalanceRequest(StrictBaseModel):
     """Request payload to query account balance."""
-
-    model_config = ConfigDict(strict=True)
 
     account_number: str = Field(description="Customer account number (full or masked)")
 
 
-class AccountBalanceResponse(BaseModel):
+class AccountBalanceResponse(StrictBaseModel):
     """Response payload for account balance query."""
-
-    model_config = ConfigDict(strict=True)
 
     account_number: str = Field(description="Masked account number")
     account_type: str = Field(description="Type of account")
@@ -30,20 +26,16 @@ class AccountBalanceResponse(BaseModel):
     status: str = Field(description="Account status")
 
 
-class AccountListResponse(BaseModel):
+class AccountListResponse(StrictBaseModel):
     """Response payload for listing customer accounts."""
-
-    model_config = ConfigDict(strict=True)
 
     customer_id: str = Field(description="Customer CIF")
     accounts: list[BankAccount] = Field(description="List of accounts owned by customer")
     total_accounts: int = Field(description="Total account count")
 
 
-class AccountSummaryResponse(BaseModel):
+class AccountSummaryResponse(StrictBaseModel):
     """Summary of all customer accounts."""
-
-    model_config = ConfigDict(strict=True)
 
     customer_id: str = Field(description="Customer CIF")
     total_balance_inr: Decimal = Field(description="Total net balance across accounts")

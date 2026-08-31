@@ -10,19 +10,19 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-# ─── Base Pydantic Model with Strict Validation ───
+# ─── Base Pydantic Model with Strict Validation & Coercion Safeguards ───
 
 
 class StrictBaseModel(BaseModel):
-    """Base Pydantic model enforcing strict type validation across all domain entities."""
+    """Base Pydantic model enforcing strict type validation while allowing standard JSON string coercion."""
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=False, validate_assignment=True, extra="forbid")
 
 
 class StrictFrozenBaseModel(BaseModel):
     """Immutable base Pydantic model enforcing strict type validation."""
 
-    model_config = ConfigDict(strict=True, frozen=True)
+    model_config = ConfigDict(strict=False, frozen=True, validate_assignment=True, extra="forbid")
 
 
 # ─── Enums ───

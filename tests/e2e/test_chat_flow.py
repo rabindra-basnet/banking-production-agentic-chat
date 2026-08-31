@@ -1,6 +1,8 @@
-"""End-to-end chat flow tests using FastAPI TestClient / AsyncClient."""
+"""End-to-end chat flow tests using FastAPI TestClient / AsyncClient across all domains."""
 
 from __future__ import annotations
+
+from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,14 +22,65 @@ async def test_health_endpoint() -> None:
 
 
 @pytest.mark.asyncio
-async def test_chat_flow_endpoint() -> None:
+async def test_chat_flow_accounts_intent() -> None:
+    session_id = uuid4()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.post(
-            "/chat",
-            json={"message": "What is my account balance?"},
+            "/api/v1/chat",
+            json={"message": "What is my savings account balance?", "session_id": str(session_id)},
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert "message" in data
-        assert "routed_agent" in data
+        assert "account" in data["message"].lower()
+        assert data["routed_agent"] == "accounts_agent"
+        assert data["session_id"] == str(session_id)
+
+
+@pytest.mark.asyncio
+async def test_chat_flow_transactions_intent() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/chat",
+            json={"message": "Show me my recent transactions and spending summary"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["routed_agent"] == "transaction_agent"
+        assert "transaction" in data["message"].lower() or "spending" in data["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_chat_flow_services_intent() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/chat",
+            json={"message": "Please block my lost debit card ending in 1234"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["routed_agent"] == "service_agent"
+        assert "block" in data["message"].lower() or "card" in data["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_conversation_history_persistence() -> None:
+    session_id = uuid4()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # Step 1: Send message
+        await client.post(
+            "/api/v1/chat",
+            json={"message": "What is my account balance?", "session_id": str(session_id)},
+        )
+
+        # Step 2: Fetch history
+        resp = await client.get(f"/api/v1/history/{session_id}")
+        assert resp.status_code == 200
+        history_data = resp.json()
+        assert history_data["session_id"] == str(session_id)
+        assert len(history_data["messages"]) >= 2
+        assert history_data["messages"][0]["role"] == "user"
+        assert history_data["messages"][1]["role"] == "assistant"

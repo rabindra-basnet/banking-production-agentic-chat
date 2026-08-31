@@ -53,9 +53,9 @@ class TransactionsService:
                     date=m.date,
                     description=m.description,
                     amount=m.amount,
-                    type=m.type,  # type: ignore[arg-type]
+                    type=m.type,
                     balance_after=m.balance_after,
-                    channel=m.channel,  # type: ignore[arg-type]
+                    channel=m.channel,
                     counterparty=m.counterparty,
                 )
                 for m in records

@@ -20,8 +20,8 @@ from banking_chat.modules.chat.schemas import (
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 
 router = APIRouter(tags=["Chat & Conversation"])
-pipeline = ChatPipeline()
 memory_manager = ConversationMemoryManager()
+pipeline = ChatPipeline(memory_manager=memory_manager)
 
 
 @router.post(
