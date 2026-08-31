@@ -29,7 +29,7 @@ services:
     build:
       context: ../../
       dockerfile: deploy/docker/Dockerfile.dev
-    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/accounts_server/main.py"]
+    command: ["uv", "run", "python", "src/banking_chat/mcp/accounts_server/main.py"]
     ports:
       - "9001:9001"
     env_file:
@@ -43,7 +43,7 @@ services:
     build:
       context: ../../
       dockerfile: deploy/docker/Dockerfile.dev
-    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/transactions_server/main.py"]
+    command: ["uv", "run", "python", "src/banking_chat/mcp/transactions_server/main.py"]
     ports:
       - "9002:9002"
     env_file:
@@ -57,7 +57,7 @@ services:
     build:
       context: ../../
       dockerfile: deploy/docker/Dockerfile.dev
-    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/services_server/main.py"]
+    command: ["uv", "run", "python", "src/banking_chat/mcp/services_server/main.py"]
     ports:
       - "9003:9003"
     env_file:

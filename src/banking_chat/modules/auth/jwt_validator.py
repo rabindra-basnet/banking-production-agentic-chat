@@ -72,6 +72,12 @@ class JWTValidator:
             UUID(token_payload.sub) if isinstance(token_payload.sub, str) and len(token_payload.sub) == 36 else uuid4()
         )
 
+        expiry_dt = (
+            datetime.fromtimestamp(token_payload.exp, tz=UTC)
+            if isinstance(token_payload.exp, (int, float))
+            else token_payload.exp
+        )
+
         return AuthenticatedUser(
             user_id=user_uuid,
             customer_id=token_payload.cif,
@@ -80,5 +86,5 @@ class JWTValidator:
             tier=token_payload.tier,
             accounts=token_payload.accounts,
             session_id=uuid4(),
-            token_expiry=token_payload.exp,
+            token_expiry=expiry_dt,
         )

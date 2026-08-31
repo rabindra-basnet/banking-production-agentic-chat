@@ -85,13 +85,13 @@ run-prod: ## Run the chat application (production)
 	uv run uvicorn banking_chat.main:app --host 0.0.0.0 --port 8000 --workers 4
 
 run-mcp-accounts: ## Run Accounts FastMCP standalone server (port 9001)
-	uv run python src/banking_chat/mcp_deployables/accounts_server/main.py
+	uv run python src/banking_chat/mcp/accounts_server/main.py
 
 run-mcp-transactions: ## Run Transactions FastMCP standalone server (port 9002)
-	uv run python src/banking_chat/mcp_deployables/transactions_server/main.py
+	uv run python src/banking_chat/mcp/transactions_server/main.py
 
 run-mcp-services: ## Run Services FastMCP standalone server (port 9003)
-	uv run python src/banking_chat/mcp_deployables/services_server/main.py
+	uv run python src/banking_chat/mcp/services_server/main.py
 
 # ─── Docker ───
 

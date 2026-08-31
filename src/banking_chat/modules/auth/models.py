@@ -32,7 +32,7 @@ class Permission(StrEnum):
 class TokenPayload(BaseModel):
     """Decoded JWT payload from Identity Provider."""
 
-    model_config = ConfigDict(strict=True)
+    model_config = ConfigDict(strict=False, extra="ignore")
 
     sub: str = Field(description="Subject (User ID)")
     cif: str = Field(description="Customer Information File number")
@@ -41,8 +41,8 @@ class TokenPayload(BaseModel):
     tier: CustomerTier = Field(default=CustomerTier.STANDARD, description="Customer tier")
     accounts: list[str] = Field(default_factory=list, description="Authorized account numbers")
     roles: list[str] = Field(default_factory=lambda: [str(Role.CUSTOMER)], description="Assigned roles")
-    exp: datetime = Field(description="Expiration timestamp")
-    iat: datetime = Field(description="Issued at timestamp")
+    exp: int | datetime = Field(description="Expiration timestamp")
+    iat: int | datetime = Field(description="Issued at timestamp")
     iss: str = Field(description="Issuer URL")
     aud: str = Field(description="Audience")
 

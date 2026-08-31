@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from banking_chat.mcp_deployables.accounts_server.handlers import AccountsMCPHandlers
+from banking_chat.mcp.accounts_server.handlers import AccountsMCPHandlers
 
 app = FastAPI(title="Banking Accounts MCP Server", version="0.1.0")
 handlers = AccountsMCPHandlers()

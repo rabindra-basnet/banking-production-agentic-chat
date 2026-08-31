@@ -1,10 +1,15 @@
-"""Tests for transactions MCP server."""
+"""Unit tests for Transactions MCP handlers."""
 
 from __future__ import annotations
 
+import pytest
 
-class TestTransactionsMCP:
-    """Test suite for the Transactions MCP Server."""
+from banking_chat.mcp.transactions_server.handlers import TransactionsMCPHandlers
 
-    # TODO: Implement in Phase 2
-    pass
+
+@pytest.mark.asyncio
+async def test_transactions_mcp_handler() -> None:
+    handlers = TransactionsMCPHandlers()
+    res = await handlers.get_transactions("CIF001234")
+    assert res["customer_id"] == "CIF001234"
+    assert len(res["transactions"]) > 0

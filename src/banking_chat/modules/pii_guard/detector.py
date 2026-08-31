@@ -21,12 +21,12 @@ class PIIDetector:
     """Detects sensitive PII elements in banking conversations."""
 
     PATTERNS: list[tuple[PIIType, Any, float]] = [
+        (PIIType.EMAIL, EMAIL_PATTERN, 0.95),
         (PIIType.PAN, PAN_PATTERN, 0.95),
         (PIIType.AADHAAR, AADHAAR_PATTERN, 0.90),
         (PIIType.IFSC, IFSC_PATTERN, 0.90),
         (PIIType.UPI_ID, UPI_ID_PATTERN, 0.85),
         (PIIType.PHONE, PHONE_PATTERN, 0.85),
-        (PIIType.EMAIL, EMAIL_PATTERN, 0.95),
         (PIIType.CREDIT_CARD, CARD_PATTERN, 0.90),
         (PIIType.BANK_ACCOUNT, ACCOUNT_NUMBER_PATTERN, 0.70),
     ]
@@ -37,14 +37,13 @@ class PIIDetector:
             return PIIDetectionResult(has_pii=False, entities=[], entity_counts={})
 
         entities: list[PIIEntity] = []
-        # Keep track of covered spans to avoid overlapping detections
         covered_spans: list[tuple[int, int]] = []
 
         for pii_type, regex, score in self.PATTERNS:
             for match in regex.finditer(text):
                 start, end = match.span()
-                # Check overlap
-                if any(c_start <= start and end <= c_end for c_start, c_end in covered_spans):
+                # Check for any overlap with already detected spans
+                if any(start < c_end and end > c_start for c_start, c_end in covered_spans):
                     continue
 
                 entity = PIIEntity(
