@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from banking_chat.common.types import AuthenticatedUser, CustomerTier
+from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
 
 
 @pytest.fixture

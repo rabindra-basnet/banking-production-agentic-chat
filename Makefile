@@ -62,13 +62,36 @@ security-scan: ## Run all security scans
 pre-commit-all: ## Run all pre-commit hooks
 	uv run pre-commit run --all-files
 
-# ─── Application ───
+# ─── Database Migrations (Alembic) ───
 
-run: ## Run the application (development)
-	uv run uvicorn banking_chat.api.main:app --reload --host 0.0.0.0 --port 8000
+migrate: ## Run pending database migrations
+	uv run alembic upgrade head
 
-run-prod: ## Run the application (production)
-	uv run uvicorn banking_chat.api.main:app --host 0.0.0.0 --port 8000 --workers 4
+migration-generate: ## Generate a new Alembic migration (e.g. make migration-generate m="add accounts table")
+	uv run alembic revision --autogenerate -m "$(m)"
+
+migrate-down: ## Rollback last migration
+	uv run alembic downgrade -1
+
+migrate-history: ## View migration history
+	uv run alembic history
+
+# ─── Application & MCP Servers ───
+
+run: ## Run the chat application (development)
+	uv run uvicorn banking_chat.main:app --reload --host 0.0.0.0 --port 8000
+
+run-prod: ## Run the chat application (production)
+	uv run uvicorn banking_chat.main:app --host 0.0.0.0 --port 8000 --workers 4
+
+run-mcp-accounts: ## Run Accounts FastMCP standalone server (port 9001)
+	uv run python src/banking_chat/mcp_deployables/accounts_server/main.py
+
+run-mcp-transactions: ## Run Transactions FastMCP standalone server (port 9002)
+	uv run python src/banking_chat/mcp_deployables/transactions_server/main.py
+
+run-mcp-services: ## Run Services FastMCP standalone server (port 9003)
+	uv run python src/banking_chat/mcp_deployables/services_server/main.py
 
 # ─── Docker ───
 

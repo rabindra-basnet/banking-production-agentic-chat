@@ -16,6 +16,54 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      mcp-accounts:
+        condition: service_started
+      mcp-transactions:
+        condition: service_started
+      mcp-services:
+        condition: service_started
+    networks:
+      - banking-chat
+
+  mcp-accounts:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.dev
+    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/accounts_server/main.py"]
+    ports:
+      - "9001:9001"
+    env_file:
+      - ../../.env
+    volumes:
+      - ../../src:/app/src
+    networks:
+      - banking-chat
+
+  mcp-transactions:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.dev
+    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/transactions_server/main.py"]
+    ports:
+      - "9002:9002"
+    env_file:
+      - ../../.env
+    volumes:
+      - ../../src:/app/src
+    networks:
+      - banking-chat
+
+  mcp-services:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.dev
+    command: ["uv", "run", "python", "src/banking_chat/mcp_deployables/services_server/main.py"]
+    ports:
+      - "9003:9003"
+    env_file:
+      - ../../.env
+    volumes:
+      - ../../src:/app/src
     networks:
       - banking-chat
 

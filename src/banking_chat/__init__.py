@@ -1,3 +1,3 @@
-"""Banking Production Agentic Chat — Main Package."""
+"""Banking Production Agentic Chat — Vertical Slices Architecture."""
 
 __version__ = "0.1.0"

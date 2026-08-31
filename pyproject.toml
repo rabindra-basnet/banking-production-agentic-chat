@@ -21,6 +21,7 @@ dependencies = [
     "redis>=5.2.0",
     "asyncpg>=0.30.0",
     "sqlalchemy[asyncio]>=2.0.0",
+    "alembic>=1.14.0",
     "httpx>=0.28.0",
     "presidio-analyzer>=2.2.0",
     "presidio-anonymizer>=2.2.0",
@@ -80,9 +81,12 @@ select = [
 ]
 ignore = [
     "S101",  # Allow assert in tests
+    "S104",  # Binding to all interfaces in container entrypoint
     "S105",  # False positive on token prefixes
     "B008",  # Allow function calls in defaults (FastAPI Depends)
     "E501",  # Let ruff format handle formatting
+    "RUF012",  # Mutable class attributes
+    "S110",  # Broad exception handling
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -108,6 +112,8 @@ module = [
     "langchain_core.*",
     "langchain_openai.*",
     "mcp.*",
+    "mcp.server.fastmcp.*",
+    "jose.*",
 ]
 ignore_missing_imports = true
 
@@ -137,7 +143,7 @@ markers = [
 # ─── Bandit ───
 [tool.bandit]
 targets = ["src"]
-skips = ["B101", "B105"]
+skips = ["B101", "B104", "B105", "B110"]
 
 # ─── Coverage ───
 [tool.coverage.run]

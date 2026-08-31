@@ -1,1 +1,0 @@
-"""Transaction agent implementation."""

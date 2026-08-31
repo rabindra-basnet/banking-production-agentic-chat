@@ -1,1 +1,0 @@
-"""Abstract session store interface."""

@@ -1,1 +1,0 @@
-"""OpenTelemetry distributed tracing setup."""
