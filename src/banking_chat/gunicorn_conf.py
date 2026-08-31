@@ -1,6 +1,7 @@
 """Production Gunicorn Configuration Loader for Banking Production Agentic Chat.
 
-Loads runtime deployment parameters from `deploy/docker/gunicorn.yaml` (or custom path via `GUNICORN_YAML_CONFIG`) with environment variable overrides.
+Supports flexible YAML config resolution across container environments (e.g. `./gunicorn.yaml`,
+`deploy/docker/gunicorn.yaml`, `/app/gunicorn.yaml`, or custom via `GUNICORN_YAML_CONFIG`).
 """
 
 from __future__ import annotations
@@ -12,9 +13,38 @@ from typing import Any
 
 import yaml
 
-# Determine path to YAML config file (defaults to deploy/docker/gunicorn.yaml relative to project root)
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-YAML_PATH = Path(os.getenv("GUNICORN_YAML_CONFIG", str(PROJECT_ROOT / "deploy" / "docker" / "gunicorn.yaml")))
+
+def _resolve_yaml_config_path() -> Path | None:
+    """Resolve the YAML configuration file path by inspecting common container and local candidate locations."""
+    # 1. Explicit environment variable
+    env_override = os.getenv("GUNICORN_YAML_CONFIG")
+    if env_override:
+        p = Path(env_override)
+        if p.exists():
+            return p
+
+    # 2. Candidate relative and standard container locations
+    cwd = Path.cwd()
+    package_dir = Path(__file__).resolve().parent
+    repo_root = package_dir.parent.parent
+
+    candidate_paths = [
+        cwd / "gunicorn.yaml",  # ./gunicorn.yaml (e.g. in Docker working directory /app)
+        cwd / "gunicorn.yml",  # ./gunicorn.yml
+        cwd / "deploy" / "docker" / "gunicorn.yaml",  # Local dev execution from repository root
+        repo_root / "deploy" / "docker" / "gunicorn.yaml",  # Project root deployment path
+        Path("/app/gunicorn.yaml"),  # Standard container root path
+        Path("/etc/banking-chat/gunicorn.yaml"),  # Production Linux system config path
+    ]
+
+    for candidate in candidate_paths:
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+YAML_PATH = _resolve_yaml_config_path()
 
 # Default configuration values
 cfg: dict[str, Any] = {
@@ -30,7 +60,7 @@ cfg: dict[str, Any] = {
 }
 
 # Load YAML if present
-if YAML_PATH.exists():
+if YAML_PATH and YAML_PATH.exists():
     try:
         with open(YAML_PATH, encoding="utf-8") as f:
             loaded = yaml.safe_load(f)

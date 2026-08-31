@@ -13,8 +13,9 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies
 RUN uv sync --frozen --no-dev --no-editable
 
-# Copy source code
+# Copy source code and deployment config
 COPY src/ src/
+COPY deploy/docker/gunicorn.yaml ./gunicorn.yaml
 
 # Stage 2: Runtime
 FROM python:3.12-slim AS runtime
