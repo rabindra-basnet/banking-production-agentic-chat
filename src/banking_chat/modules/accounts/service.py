@@ -33,10 +33,10 @@ class AccountsService:
             accounts = [
                 BankAccount(
                     account_number=mask_account_number(m.account_number),
-                    account_type=m.account_type,  # type: ignore[arg-type]
+                    account_type=m.account_type,
                     balance=m.balance,
                     currency=m.currency,
-                    status=m.status,  # type: ignore[arg-type]
+                    status=m.status,
                     branch_name=m.branch_name,
                     ifsc_code=m.ifsc_code,
                 )

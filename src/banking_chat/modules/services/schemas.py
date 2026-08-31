@@ -4,15 +4,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import Field
 
-from banking_chat.core.common.types import ServiceRequest
+from banking_chat.core.common.types import ServiceRequest, StrictBaseModel
 
 
-class CreateServiceRequestPayload(BaseModel):
+class CreateServiceRequestPayload(StrictBaseModel):
     """Payload to submit a new service request."""
-
-    model_config = ConfigDict(strict=True)
 
     type: Literal[
         "cheque_book",
@@ -25,20 +23,16 @@ class CreateServiceRequestPayload(BaseModel):
     notes: str | None = Field(default=None, description="Optional customer instructions")
 
 
-class ServiceRequestListResponse(BaseModel):
+class ServiceRequestListResponse(StrictBaseModel):
     """Response payload containing list of customer service requests."""
-
-    model_config = ConfigDict(strict=True)
 
     customer_id: str = Field(description="Customer CIF")
     requests: list[ServiceRequest] = Field(description="List of active or past service requests")
     total_count: int = Field(description="Total count of requests")
 
 
-class BlockCardRequest(BaseModel):
+class BlockCardRequest(StrictBaseModel):
     """Payload to immediately block a debit/credit card."""
-
-    model_config = ConfigDict(strict=True)
 
     card_last_four: str = Field(description="Last 4 digits of the card to block")
     reason: Literal["lost", "stolen", "fraud", "damaged"] = Field(
@@ -47,10 +41,8 @@ class BlockCardRequest(BaseModel):
     block_type: Literal["temporary", "permanent"] = Field(default="permanent", description="Type of block")
 
 
-class BlockCardResponse(BaseModel):
+class BlockCardResponse(StrictBaseModel):
     """Response payload for card blocking action."""
-
-    model_config = ConfigDict(strict=True)
 
     success: bool = Field(description="Whether the card was successfully blocked")
     request_id: str = Field(description="Reference ID for this operation")

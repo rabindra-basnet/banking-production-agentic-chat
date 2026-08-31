@@ -65,8 +65,8 @@ class CustomerServicesService:
             requests = [
                 ServiceRequest(
                     request_id=m.request_id,
-                    type=m.type,  # type: ignore[arg-type]
-                    status=m.status,  # type: ignore[arg-type]
+                    type=m.type,
+                    status=m.status,
                     submitted_at=m.submitted_at,
                     estimated_completion=m.estimated_completion,
                     notes=m.notes,
