@@ -1,42 +1,51 @@
-"""Standalone FastMCP server application for Transactions on Port 9002."""
+"""Standalone FastMCP Streamable HTTP Microservice for Transactions (Port 9002)."""
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from mcp.server.mcpserver import MCPServer
 
+from banking_chat.core.config.logging_config import setup_logging
 from banking_chat.mcp.transactions.handlers import TransactionsMCPHandlers
 
-app = FastAPI(title="Banking Transactions MCP Server", version="0.1.0")
+logger = logging.getLogger("banking_chat.mcp.transactions")
+
+# Instantiate MCPServer
+mcp_server = MCPServer("banking-transactions-mcp")
 handlers = TransactionsMCPHandlers()
 
 
-class TransactionsRequest(BaseModel):
-    customer_id: str = Field(description="Customer CIF")
-    account_number: str | None = Field(default=None, description="Optional account filter")
-    limit: int = Field(default=10, ge=1, le=100)
+@mcp_server.tool(description="Query transaction history for a customer")
+async def get_transactions(customer_id: str, account_number: str | None = None, limit: int = 10) -> dict[str, Any]:
+    """MCP tool: get_transactions."""
+    logger.info(
+        "Executing get_transactions for customer_id=%s, account=%s, limit=%d", customer_id, account_number, limit
+    )
+    query: dict[str, Any] = {"limit": limit}
+    if account_number:
+        query["account_number"] = account_number
+    return await handlers.get_transactions(customer_id, query)
 
 
-@app.post("/tools/get_transactions")
-async def get_transactions_tool(payload: TransactionsRequest) -> dict[str, Any]:
-    return await handlers.get_transactions(payload.customer_id, payload.model_dump())
+@mcp_server.tool(description="Fetch spending summary for a customer over N days")
+async def get_spending_summary(customer_id: str, days: int = 30) -> dict[str, Any]:
+    """MCP tool: get_spending_summary."""
+    logger.info("Executing get_spending_summary for customer_id=%s, days=%d", customer_id, days)
+    return await handlers.get_spending_summary(customer_id, days=days)
 
 
-@app.post("/tools/get_spending_summary")
-async def get_spending_summary_tool(payload: TransactionsRequest) -> dict[str, Any]:
-    return await handlers.get_spending_summary(payload.customer_id)
-
-
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok", "service": "banking-transactions-mcp", "port": "9002"}
+# Export the Streamable HTTP ASGI Starlette app
+app = mcp_server.streamable_http_app()
 
 
 def run_server() -> None:
+    """Run the standalone Streamable HTTP MCP server on port 9002."""
     import uvicorn
 
+    setup_logging(log_level="INFO", json_output=False)
+    logger.info("Starting Banking Transactions Streamable HTTP MCP server on port 9002...")
     uvicorn.run(app, host="0.0.0.0", port=9002)
 
 

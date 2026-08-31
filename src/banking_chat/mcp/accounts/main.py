@@ -1,50 +1,53 @@
-"""Standalone FastMCP server application for Bank Accounts on Port 9001."""
+"""Standalone FastMCP Streamable HTTP Microservice for Bank Accounts (Port 9001)."""
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from mcp.server.mcpserver import MCPServer
 
+from banking_chat.core.config.logging_config import setup_logging
 from banking_chat.mcp.accounts.handlers import AccountsMCPHandlers
 
-app = FastAPI(title="Banking Accounts MCP Server", version="0.1.0")
+logger = logging.getLogger("banking_chat.mcp.accounts")
+
+# Instantiate MCPServer
+mcp_server = MCPServer("banking-accounts-mcp")
 handlers = AccountsMCPHandlers()
 
 
-class AccountsRequest(BaseModel):
-    customer_id: str = Field(description="Customer CIF")
+@mcp_server.tool(description="Fetch all accounts owned by a customer")
+async def get_accounts(customer_id: str) -> dict[str, Any]:
+    """MCP tool: get_accounts."""
+    logger.info("Executing get_accounts for customer_id=%s", customer_id)
+    return await handlers.get_accounts(customer_id)
 
 
-class AccountBalancePayload(BaseModel):
-    customer_id: str = Field(description="Customer CIF")
-    account_number: str = Field(description="Target account number")
+@mcp_server.tool(description="Fetch balance for a specific account")
+async def get_account_balance(customer_id: str, account_number: str) -> dict[str, Any]:
+    """MCP tool: get_account_balance."""
+    logger.info("Executing get_account_balance for customer_id=%s, account_number=%s", customer_id, account_number)
+    return await handlers.get_account_balance(customer_id, account_number)
 
 
-@app.post("/tools/get_accounts")
-async def get_accounts_tool(payload: AccountsRequest) -> dict[str, Any]:
-    return await handlers.get_accounts(payload.customer_id)
+@mcp_server.tool(description="Fetch consolidated account summary for a customer")
+async def get_account_summary(customer_id: str) -> dict[str, Any]:
+    """MCP tool: get_account_summary."""
+    logger.info("Executing get_account_summary for customer_id=%s", customer_id)
+    return await handlers.get_account_summary(customer_id)
 
 
-@app.post("/tools/get_account_balance")
-async def get_account_balance_tool(payload: AccountBalancePayload) -> dict[str, Any]:
-    return await handlers.get_account_balance(payload.customer_id, payload.account_number)
-
-
-@app.post("/tools/get_account_summary")
-async def get_account_summary_tool(payload: AccountsRequest) -> dict[str, Any]:
-    return await handlers.get_account_summary(payload.customer_id)
-
-
-@app.get("/health")
-async def health_check() -> dict[str, str]:
-    return {"status": "ok", "service": "banking-accounts-mcp", "port": "9001"}
+# Export the Streamable HTTP ASGI Starlette app
+app = mcp_server.streamable_http_app()
 
 
 def run_server() -> None:
+    """Run the standalone Streamable HTTP MCP server on port 9001."""
     import uvicorn
 
+    setup_logging(log_level="INFO", json_output=False)
+    logger.info("Starting Banking Accounts Streamable HTTP MCP server on port 9001...")
     uvicorn.run(app, host="0.0.0.0", port=9001)
 
 

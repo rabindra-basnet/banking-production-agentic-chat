@@ -21,7 +21,7 @@ from banking_chat.modules.observability.tracing import setup_tracing
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifecycle management for database, cache, and telemetry."""
     settings = get_settings()
-    setup_logging(log_level=settings.app_log_level)
+    setup_logging(log_level=settings.app_log_level, json_output=settings.app_env == "production")
     setup_tracing()
     get_engine()
 
@@ -64,31 +64,6 @@ def start() -> None:
 
     settings = get_settings()
     uvicorn.run("banking_chat.main:app", host="0.0.0.0", port=settings.app_port, reload=True)
-
-
-def start_prod() -> None:
-    """Entry point for running the API server in production with Gunicorn + Uvicorn workers."""
-    import subprocess
-    import sys
-
-    settings = get_settings()
-    cmd = [
-        sys.executable,
-        "-m",
-        "gunicorn",
-        "banking_chat.main:app",
-        "-w",
-        "4",
-        "-k",
-        "uvicorn.workers.UvicornWorker",
-        "-b",
-        f"0.0.0.0:{settings.app_port}",
-        "--access-logfile",
-        "-",
-        "--error-logfile",
-        "-",
-    ]
-    subprocess.run(cmd, check=True)  # noqa: S603
 
 
 if __name__ == "__main__":
