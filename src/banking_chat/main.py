@@ -21,7 +21,7 @@ from banking_chat.modules.observability.tracing import setup_tracing
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifecycle management for database, cache, and telemetry."""
     settings = get_settings()
-    setup_logging(log_level=settings.app_log_level)
+    setup_logging(log_level=settings.app_log_level, json_output=settings.app_env == "production")
     setup_tracing()
     get_engine()
 
@@ -59,7 +59,7 @@ app = create_app()
 
 
 def start() -> None:
-    """Entry point for running the API server."""
+    """Entry point for running the API server in development mode."""
     import uvicorn
 
     settings = get_settings()

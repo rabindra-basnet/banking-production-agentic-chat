@@ -81,19 +81,19 @@ migrate-history: ## View migration history
 run: ## Run the chat application (development)
 	uv run uvicorn banking_chat.main:app --reload --host 0.0.0.0 --port 8000
 
-run-prod: ## Run the chat application (production)
-	uv run uvicorn banking_chat.main:app --host 0.0.0.0 --port 8000 --workers 4
+run-prod: ## Run the chat application (production with Gunicorn + Uvicorn workers)
+	uv run gunicorn banking_chat.main:app -c deploy/docker/gunicorn_conf.py
 
 run-mcp-accounts: ## Run Accounts FastMCP standalone server (port 9001)
-	uv run python src/banking_chat/mcp/accounts_server/main.py
+	uv run python src/banking_chat/mcp/accounts/main.py
 
 run-mcp-transactions: ## Run Transactions FastMCP standalone server (port 9002)
-	uv run python src/banking_chat/mcp/transactions_server/main.py
+	uv run python src/banking_chat/mcp/transactions/main.py
 
 run-mcp-services: ## Run Services FastMCP standalone server (port 9003)
-	uv run python src/banking_chat/mcp/services_server/main.py
+	uv run python src/banking_chat/mcp/services/main.py
 
-# ─── Docker ───
+# ─── Docker & Podman (Container Orchestration) ───
 
 docker-build: ## Build Docker image
 	docker build -f deploy/docker/Dockerfile -t banking-agentic-chat .
@@ -103,6 +103,15 @@ docker-up: ## Start all services with Docker Compose
 
 docker-down: ## Stop all services
 	docker compose -f deploy/docker/docker-compose.yml down
+
+podman-build: ## Build Podman image
+	podman build -f deploy/docker/Dockerfile -t banking-agentic-chat .
+
+podman-up: ## Start all services with Podman Compose
+	podman-compose -f deploy/docker/docker-compose.yml up -d
+
+podman-down: ## Stop all services with Podman Compose
+	podman-compose -f deploy/docker/docker-compose.yml down
 
 # ─── Cleanup ───
 

@@ -1,3 +1,1 @@
-"""Standalone deployable FastMCP server hosts."""
-
-from __future__ import annotations
+"""Standalone deployable MCP server hosts for Accounts, Transactions, and Services."""

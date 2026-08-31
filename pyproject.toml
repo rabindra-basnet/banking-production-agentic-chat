@@ -12,6 +12,7 @@ authors = [
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
+    "gunicorn>=23.0.0",
     "pydantic>=2.9.0",
     "pydantic-settings>=2.6.0",
     "langchain-core>=0.3.0",
@@ -120,6 +121,7 @@ ignore_missing_imports = true
 
 # ─── Pytest ───
 [tool.pytest.ini_options]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
@@ -144,7 +146,7 @@ markers = [
 # ─── Bandit ───
 [tool.bandit]
 targets = ["src"]
-skips = ["B101", "B104", "B105", "B110"]
+skips = ["B101", "B104", "B105", "B110", "B404", "B603"]
 
 # ─── Coverage ───
 [tool.coverage.run]

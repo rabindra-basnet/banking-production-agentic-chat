@@ -10,6 +10,21 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+# ─── Base Pydantic Model with Strict Validation ───
+
+
+class StrictBaseModel(BaseModel):
+    """Base Pydantic model enforcing strict type validation across all domain entities."""
+
+    model_config = ConfigDict(strict=True)
+
+
+class StrictFrozenBaseModel(BaseModel):
+    """Immutable base Pydantic model enforcing strict type validation."""
+
+    model_config = ConfigDict(strict=True, frozen=True)
+
+
 # ─── Enums ───
 
 
@@ -33,10 +48,8 @@ class AgentName(StrEnum):
 # ─── Authentication Models ───
 
 
-class AuthenticatedUser(BaseModel):
+class AuthenticatedUser(StrictFrozenBaseModel):
     """Validated user identity from the bank's identity provider (IdP)."""
-
-    model_config = ConfigDict(strict=True, frozen=True)
 
     user_id: UUID = Field(description="Unique customer identifier from bank's IdP")
     customer_id: str = Field(description="Bank's internal customer number (CIF)")
@@ -51,10 +64,8 @@ class AuthenticatedUser(BaseModel):
 # ─── Banking Entity Models ───
 
 
-class BankAccount(BaseModel):
+class BankAccount(StrictBaseModel):
     """Bank account details returned by Accounts MCP Server."""
-
-    model_config = ConfigDict(strict=True)
 
     account_number: str = Field(description="Masked account number (last 4 digits visible)")
     account_type: Literal["savings", "current", "fixed_deposit", "recurring_deposit"]
@@ -65,10 +76,8 @@ class BankAccount(BaseModel):
     ifsc_code: str = Field(description="IFSC code")
 
 
-class Transaction(BaseModel):
+class Transaction(StrictBaseModel):
     """Individual transaction record."""
-
-    model_config = ConfigDict(strict=True)
 
     transaction_id: str = Field(description="Unique transaction reference")
     date: datetime = Field(description="Transaction date and time")
@@ -80,10 +89,8 @@ class Transaction(BaseModel):
     counterparty: str | None = Field(default=None, description="Payee/Payer name if available")
 
 
-class ServiceRequest(BaseModel):
+class ServiceRequest(StrictBaseModel):
     """Customer service request status."""
-
-    model_config = ConfigDict(strict=True)
 
     request_id: str = Field(description="Service request ID")
     type: Literal[

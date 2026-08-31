@@ -15,12 +15,12 @@ class TransactionsMCPHandlers:
         self.service = service or TransactionsService()
 
     async def get_transactions(self, customer_id: str, query: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Fetch transactions for customer."""
         req = TransactionQueryRequest.model_validate(query) if query else None
         res = await self.service.get_transactions(customer_id, req)
-        return res.model_dump(mode="json")
+        result: dict[str, Any] = res.model_dump(mode="json")
+        return result
 
     async def get_spending_summary(self, customer_id: str, days: int = 30) -> dict[str, Any]:
-        """Fetch spending breakdown."""
         res = await self.service.get_spending_summary(customer_id, days)
-        return res.model_dump(mode="json")
+        result: dict[str, Any] = res.model_dump(mode="json")
+        return result
