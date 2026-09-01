@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8000, description="Application port")
     app_log_level: str = Field(default="INFO", description="Logging level")
     app_secret_key: str = Field(default="change-me-in-production", description="Secret key for signing")
+    cors_allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:8000",
+        ],
+        description="Explicit allowed CORS origins to prevent Cross-Origin Request Forgery",
+    )
 
     # Authentication & JWT Tokens
     auth_idp_issuer: str = Field(default="https://idp.bank.com/realms/banking", description="IdP issuer URL")
