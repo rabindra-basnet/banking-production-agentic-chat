@@ -101,8 +101,8 @@ class TokenBlacklistManager:
                 if record is not None:
                     self._memory_cache.add(token_hash)
                     return True
-        except Exception as err:
-            logger.error("Error querying token blacklist from database: %s", err)
+        except Exception:
+            logger.exception("Error querying token blacklist from database")
 
         return False
 
