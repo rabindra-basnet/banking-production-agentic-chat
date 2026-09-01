@@ -17,7 +17,18 @@ async def test_service_agent_block_card(standard_user: AuthenticatedUser) -> Non
 
 
 @pytest.mark.asyncio
-async def test_service_agent_cheque_book(standard_user: AuthenticatedUser) -> None:
+async def test_service_agent_cheque_book_multiturn(standard_user: AuthenticatedUser) -> None:
     agent = ServiceAgent()
-    resp = await agent.run("I need a new cheque book", standard_user)
-    assert "Cheque Book Request Submitted" in resp
+    # Turn 1: Initial request triggers confirmation details prompt
+    prompt_resp = await agent.run("I want to request a new Cheque Book (25 leaves)", standard_user)
+    assert "Please confirm the details for your Cheque Book request" in prompt_resp
+    assert "25 leaves" in prompt_resp
+
+    # Turn 2: User confirms -> Service request executed
+    history = [
+        {"role": "user", "content": "I want to request a new Cheque Book (25 leaves)"},
+        {"role": "assistant", "content": prompt_resp},
+    ]
+    confirm_resp = await agent.run("Yes, proceed", standard_user, history=history)
+    assert "Cheque Book Request Submitted" in confirm_resp
+    assert "25 leaves" in confirm_resp
