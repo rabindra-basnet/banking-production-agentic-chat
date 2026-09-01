@@ -27,7 +27,7 @@ export default function App() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string>(() => crypto.randomUUID());
 
-  // Load SaaS App Configuration and Validate Session
+  // Load SaaS App Configuration and Validate Session from Backend
   useEffect(() => {
     async function initApp() {
       const appConfig = await fetchAppConfig();
@@ -36,7 +36,6 @@ export default function App() {
       const serverProfile = await checkAuthSession();
       if (serverProfile) {
         setCurrentUser(serverProfile);
-        localStorage.setItem('nepalbank_user', JSON.stringify(serverProfile));
         
         // Fetch sessions directly from Backend PostgreSQL / SQLite Database
         const serverSessions = await fetchServerSessions();
@@ -56,8 +55,10 @@ export default function App() {
           ]);
           setActiveSessionId(freshId);
         }
-      } else if (!serverProfile && !localStorage.getItem('nepalbank_user')) {
+      } else {
+        // No active server session (e.g. cookie expired or logged out)
         setCurrentUser(null);
+        localStorage.removeItem('nepalbank_user');
       }
       setIsLoadingAuth(false);
     }
