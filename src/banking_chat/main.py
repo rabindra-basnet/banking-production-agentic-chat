@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
+import time
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -60,6 +62,27 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["*"],
     )
+
+    access_logger = logging.getLogger("banking_chat.access")
+
+    # ─── HTTP Access Logging Middleware ───
+    @app.middleware("http")
+    async def access_log_middleware(
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        start_time = time.perf_counter()
+        client_ip = request.client.host if request.client else "unknown"
+        method = request.method
+        path = request.url.path
+
+        response: Response = await call_next(request)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+
+        access_logger.info(
+            f"{client_ip} - \"{method} {path}\" {response.status_code} ({duration_ms:.2f}ms)"
+        )
+        return response
 
     # ─── Global Exception Handlers ───
 

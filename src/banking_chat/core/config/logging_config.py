@@ -16,6 +16,7 @@ LOG_LINE_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 MODULE_LOG_MAP = {
+    "access": ["banking_chat.access", "uvicorn.access"],
     "auth": ["banking_chat.modules.auth", "banking_chat.security"],
     "chat": ["banking_chat.modules.chat"],
     "accounts": ["banking_chat.modules.accounts", "banking_chat.mcp.accounts"],
