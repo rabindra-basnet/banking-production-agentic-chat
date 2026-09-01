@@ -1,10 +1,10 @@
-"""PII masking, surrogate tokenization, and de-tokenization for LLM interactions."""
-
-from __future__ import annotations
+import logging
 
 from banking_chat.core.config.constants import PII_TOKEN_PREFIX, PII_TOKEN_SUFFIX
 from banking_chat.modules.pii_guard.detector import PIIDetector
 from banking_chat.modules.pii_guard.models import RedactionResult
+
+logger = logging.getLogger("banking_chat.modules.pii_guard")
 
 
 class PIIRedactor:
@@ -21,6 +21,8 @@ class PIIRedactor:
         detection = self.detector.detect(text)
         if not detection.has_pii:
             return RedactionResult(redacted_text=text, token_map={}, metadata={})
+
+        logger.info(f"PII detected: entity_types={[e.entity_type for e in detection.entities]}")
 
         token_map: dict[str, str] = {}
         type_counters: dict[str, int] = {}
