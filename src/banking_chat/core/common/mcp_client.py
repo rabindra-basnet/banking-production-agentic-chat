@@ -29,7 +29,9 @@ class StreamableMCPClient:
                 resp = await client.post(f"{self.base_url}/mcp", json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
-                    return data.get("result", {}).get("tools", [])
+                    tools_list = data.get("result", {}).get("tools", [])
+                    if isinstance(tools_list, list):
+                        return [t for t in tools_list if isinstance(t, dict)]
         except Exception as err:
             raise ToolExecutionError("list_tools", f"Failed to connect to MCP at {self.base_url}: {err}") from err
         return []

@@ -21,7 +21,7 @@ def get_jwt_validator() -> JWTValidator:
 async def get_current_user(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
-    validator: Annotated[JWTValidator, Depends(get_jwt_validator)] = None,
+    validator: JWTValidator = Depends(get_jwt_validator),
 ) -> AuthenticatedUser:
     """Extract and validate JWT access token strictly from in-memory Authorization Bearer header (or cookie fallback)."""
     settings = get_settings()

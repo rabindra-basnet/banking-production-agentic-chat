@@ -32,29 +32,29 @@ class ServiceAgent:
         if "block" in lower and ("card" in lower or "debit" in lower or "credit" in lower):
             match = re.search(r"\b(\d{4})\b", user_message)
             card_last_four = match.group(1) if match else "1234"
-            payload = BlockCardRequest(
+            card_payload = BlockCardRequest(
                 card_last_four=card_last_four,
                 reason="lost",
                 block_type="permanent",
             )
             try:
-                resp = await self.tools.block_card(user.customer_id, payload)
+                resp = await self.tools.block_card(user.customer_id, card_payload)
             except Exception:
-                resp = await self.service.block_card(user.customer_id, payload)
+                resp = await self.service.block_card(user.customer_id, card_payload)
 
             return f"🚨 **Card Block Confirmation**\n\n{resp.message}\nReference ID: `{resp.request_id}`."
 
         # 2. Cheque Book Service Request Tool Call
         if "cheque" in lower or "check book" in lower:
-            payload = CreateServiceRequestPayload(
+            cheque_payload = CreateServiceRequestPayload(
                 type="cheque_book",
                 notes="Cheque book requested via chatbot",
             )
             try:
-                raw_resp = await self.tools.create_service_request(user.customer_id, payload)
+                raw_resp = await self.tools.create_service_request(user.customer_id, cheque_payload)
                 req_id = raw_resp.get("request_id", "SRV-REQ-PENDING")
             except Exception:
-                req = await self.service.create_service_request(user.customer_id, payload)
+                req = await self.service.create_service_request(user.customer_id, cheque_payload)
                 req_id = req.request_id
 
             return (

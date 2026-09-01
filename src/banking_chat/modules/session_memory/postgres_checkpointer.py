@@ -40,7 +40,8 @@ class PostgresCheckpointer:
             )
             result = await session.execute(stmt)
             await session.commit()
-            return result.rowcount > 0
+            count = getattr(result, "rowcount", 0)
+            return bool(count and count > 0)
 
     async def save_checkpoint(
         self,

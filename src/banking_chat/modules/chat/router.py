@@ -275,11 +275,12 @@ async def demo_token_endpoint(
     user_info = CUSTOMER_DIRECTORY.get(customer_id, CUSTOMER_DIRECTORY["CIF908123"])
 
     return TokenResponse(
-        customer_id=user_info["customer_id"],
-        name=user_info["name"],
-        email=user_info["email"],
-        tier=str(user_info["tier"]),
-        accounts=user_info["accounts"],
+        customer_id=user_info.customer_id,
+        name=user_info.name,
+        email=user_info.email,
+        role=str(user_info.role),
+        tier=str(user_info.tier),
+        accounts=user_info.accounts,
     )
 
 
