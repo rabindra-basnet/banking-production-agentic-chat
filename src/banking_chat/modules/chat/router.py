@@ -26,6 +26,7 @@ from banking_chat.modules.auth.models import (
     TokenResponse,
     UserProfileResponse,
     UserProfileSchema,
+    UserRepository,
 )
 from banking_chat.modules.chat.graph import ChatPipeline
 from banking_chat.modules.chat.schemas import (
@@ -66,36 +67,16 @@ async def get_app_config() -> AppConfigResponse:
         supported_services=settings.supported_services,
     )
 
-# Customer user directory instantiated via Pydantic UserProfileSchema
-CUSTOMER_DIRECTORY: dict[str, UserProfileSchema] = {
-    "CIF908123": UserProfileSchema(
-        customer_id="CIF908123",
-        name="Rabindra Basnet",
-        email="rabindra.basnet@example.com.np",
-        role=Role.CUSTOMER,
-        tier=CustomerTier.STANDARD,
-        accounts=["0120100056781234 (Savings Khata)", "0120100056785678 (Muddati Khata)"],
-        password="password123",
-    ),
-    "CIF908456": UserProfileSchema(
-        customer_id="CIF908456",
-        name="Sita Shrestha",
-        email="sita.shrestha@example.com.np",
-        role=Role.CUSTOMER,
-        tier=CustomerTier.PREMIUM,
-        accounts=["0240100088994433 (Savings Khata)", "0240100088997788 (Current Khata)"],
-        password="password123",
-    ),
-    "CIF908999": UserProfileSchema(
-        customer_id="CIF908999",
-        name="Prashant Thapa",
-        email="prashant.thapa@example.com.np",
-        role=Role.ADMIN,
-        tier=CustomerTier.PRIVILEGED,
-        accounts=["0380100077771122 (Corporate Savings)", "0380100077773344 (Muddati Khata)"],
-        password="password123",
-    ),
-}
+# Fallback user profile if database entry is not yet populated
+FALLBACK_USER = UserProfileSchema(
+    customer_id="CIF908123",
+    name="Rabindra Basnet",
+    email="rabindra.basnet@example.com.np",
+    role=Role.CUSTOMER,
+    tier=CustomerTier.STANDARD,
+    accounts=["0120100056781234 (Savings Khata)", "0120100056785678 (Muddati Khata)"],
+    password="password123",
+)
 
 
 @router.post(
@@ -108,20 +89,14 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
     """Real system SSO / Banking Login handler. Sets secure access & refresh tokens in HttpOnly cookies."""
     username = payload.username.strip()
 
-    # Find customer by CIF, Email, or Full Name
-    matched_customer = None
-    for c in CUSTOMER_DIRECTORY.values():
-        if (
-            username.lower() == c.customer_id.lower()
-            or username.lower() == c.email.lower()
-            or username.lower() == c.name.lower()
-            or (username.lower() == "admin" and c.role == Role.ADMIN)
-        ):
-            matched_customer = c
-            break
+    # Query customer from PostgreSQL / SQLite Users Database Table
+    matched_customer = await UserRepository.get_by_identifier_or_email(username)
 
     if not matched_customer:
-        matched_customer = CUSTOMER_DIRECTORY["CIF908123"]
+        if username.lower() == "admin":
+            matched_customer = await UserRepository.get_by_customer_id("CIF908999")
+        if not matched_customer:
+            matched_customer = await UserRepository.get_by_customer_id("CIF908123") or FALLBACK_USER
 
     pair = jwt_validator.create_token_pair(
         customer_id=matched_customer.customer_id,
@@ -164,8 +139,8 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
 async def get_current_user_profile(
     current_user: CurrentUser,
 ) -> UserProfileResponse:
-    """Validate current session from in-memory token and return customer profile."""
-    user_info = CUSTOMER_DIRECTORY.get(current_user.customer_id, CUSTOMER_DIRECTORY["CIF908123"])
+    """Validate current session from in-memory token and return customer profile directly from Users database table."""
+    user_info = await UserRepository.get_by_customer_id(current_user.customer_id) or FALLBACK_USER
     return UserProfileResponse(
         customer_id=current_user.customer_id,
         name=current_user.name,
@@ -268,7 +243,7 @@ async def demo_token_endpoint(
 ) -> TokenResponse:
     """Generate mock demo credentials for testing."""
     tier_enum = CustomerTier(tier) if tier in CustomerTier.__members__.values() else CustomerTier.STANDARD
-    user_info = CUSTOMER_DIRECTORY.get(customer_id, CUSTOMER_DIRECTORY["CIF908123"])
+    user_info = await UserRepository.get_by_customer_id(customer_id) or FALLBACK_USER
 
     return TokenResponse(
         customer_id=user_info.customer_id,

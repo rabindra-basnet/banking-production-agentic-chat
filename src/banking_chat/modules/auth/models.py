@@ -1,16 +1,20 @@
-"""Authentication and Authorization data models and User Directory Schemas."""
+"""Authentication, User Database ORM Entities, and Pydantic Schemas."""
 
 from __future__ import annotations
 
-from datetime import datetime
+import json
+from datetime import UTC, datetime
 from enum import StrEnum
-from uuid import UUID
-
-from typing import TypedDict
+from typing import Any, TypedDict
+from uuid import UUID, uuid4
 
 from pydantic import Field
+from sqlalchemy import DateTime, Index, JSON, String, select
+from sqlalchemy.orm import Mapped, mapped_column
 
 from banking_chat.core.common.types import CustomerTier, StrictBaseModel, StrictFrozenBaseModel
+from banking_chat.core.db.base import Base
+from banking_chat.core.db.session import get_session_factory
 
 
 class TokenPairDict(TypedDict):
@@ -41,6 +45,31 @@ class Permission(StrEnum):
     ADMIN_CONFIG = "admin:config"
 
 
+# ─── SQLAlchemy Database ORM Entity for Users ───
+
+class UserModel(Base):
+    """SQLAlchemy model representing authenticated customers and administrators in the database."""
+
+    __tablename__ = "users"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    customer_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    email: Mapped[str] = mapped_column(String(128), unique=True, index=True, nullable=False)
+    role: Mapped[str] = mapped_column(String(32), default=Role.CUSTOMER, nullable=False)
+    tier: Mapped[str] = mapped_column(String(32), default=CustomerTier.STANDARD, nullable=False)
+    accounts_json: Mapped[str] = mapped_column(String(512), default="[]", nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (
+        Index("idx_users_email_role", "email", "role"),
+    )
+
+
 class UserProfileSchema(StrictBaseModel):
     """Customer / User registry schema for system authentication."""
 
@@ -53,20 +82,78 @@ class UserProfileSchema(StrictBaseModel):
     password: str = Field(default="password123", description="Hashed / authentication password")
 
 
+class UserRepository:
+    """Database repository for user authentication and customer lookups."""
+
+    @staticmethod
+    async def get_by_customer_id(customer_id: str) -> UserProfileSchema | None:
+        """Fetch user profile from database by customer ID (CIF)."""
+        factory = get_session_factory()
+        async with factory() as session:
+            stmt = select(UserModel).where(UserModel.customer_id == customer_id)
+            result = await session.execute(stmt)
+            user_orm = result.scalar_one_or_none()
+            if not user_orm:
+                return None
+
+            try:
+                accounts = json.loads(user_orm.accounts_json)
+            except Exception:
+                accounts = []
+
+            return UserProfileSchema(
+                customer_id=user_orm.customer_id,
+                name=user_orm.name,
+                email=user_orm.email,
+                role=Role(user_orm.role),
+                tier=CustomerTier(user_orm.tier),
+                accounts=accounts,
+                password=user_orm.password_hash,
+            )
+
+    @staticmethod
+    async def get_by_identifier_or_email(identifier: str) -> UserProfileSchema | None:
+        """Fetch user profile from database by CIF, Email, or Full Name."""
+        factory = get_session_factory()
+        async with factory() as session:
+            stmt = select(UserModel).where(
+                (UserModel.customer_id == identifier) | (UserModel.email == identifier) | (UserModel.name == identifier)
+            )
+            result = await session.execute(stmt)
+            user_orm = result.scalar_one_or_none()
+            if not user_orm:
+                return None
+
+            try:
+                accounts = json.loads(user_orm.accounts_json)
+            except Exception:
+                accounts = []
+
+            return UserProfileSchema(
+                customer_id=user_orm.customer_id,
+                name=user_orm.name,
+                email=user_orm.email,
+                role=Role(user_orm.role),
+                tier=CustomerTier(user_orm.tier),
+                accounts=accounts,
+                password=user_orm.password_hash,
+            )
+
+
 class AuthContext(StrictBaseModel):
     """Security and authorization context of the authenticated caller."""
 
     customer_id: str = Field(description="Unique Customer Identifier / CIF")
     roles: list[Role] = Field(default_factory=lambda: [Role.CUSTOMER], description="Assigned authorization roles")
-    permissions: list[Permission] = Field(default_factory=list, description="Computed granular permissions")
+    permissions: list[Permission] = Field(default_factory=list, description="Computed caller permissions")
     tier: CustomerTier = Field(default=CustomerTier.STANDARD, description="Customer classification tier")
 
 
-class TokenPayload(StrictBaseModel):
-    """Decoded JWT payload from Identity Provider."""
+class TokenPayload(StrictFrozenBaseModel):
+    """Decoded JWT payload representation."""
 
-    sub: str = Field(description="Subject (User ID)")
-    cif: str = Field(description="Customer Information File number")
+    sub: UUID | str = Field(description="Subject identifier (internal user UUID)")
+    cif: str = Field(description="Customer Identifier / CIF number")
     name: str = Field(description="Display Name")
     email: str = Field(description="Email address")
     tier: CustomerTier = Field(default=CustomerTier.STANDARD, description="Customer tier")
