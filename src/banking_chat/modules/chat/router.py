@@ -28,6 +28,12 @@ from banking_chat.modules.auth.models import (
     UserProfileSchema,
     UserRepository,
 )
+from banking_chat.modules.chat.dependencies import (
+    get_chat_pipeline,
+    get_idempotency_manager,
+    get_jwt_validator,
+    get_memory_manager,
+)
 from banking_chat.modules.chat.graph import ChatPipeline
 from banking_chat.modules.chat.schemas import (
     AppConfigResponse,
@@ -43,10 +49,6 @@ from banking_chat.modules.chat.schemas import (
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 
 router = APIRouter(tags=["Chat & Authentication"])
-memory_manager = ConversationMemoryManager()
-pipeline = ChatPipeline(memory_manager=memory_manager)
-jwt_validator = JWTValidator()
-idempotency_mgr = IdempotencyManager()
 
 
 @router.get(
@@ -85,7 +87,11 @@ FALLBACK_USER = UserProfileSchema(
     status_code=status.HTTP_200_OK,
     summary="Authenticate customer via SSO / Banking Credentials and set HttpOnly Cookies",
 )
-async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResponse:
+async def login_endpoint(
+    payload: LoginRequest,
+    response: Response,
+    validator: JWTValidator = Depends(get_jwt_validator),
+) -> TokenResponse:
     """Real system SSO / Banking Login handler. Sets secure access & refresh tokens in HttpOnly cookies."""
     username = payload.username.strip()
 
@@ -98,7 +104,7 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
         if not matched_customer:
             matched_customer = await UserRepository.get_by_customer_id("CIF908123") or FALLBACK_USER
 
-    pair = jwt_validator.create_token_pair(
+    pair = validator.create_token_pair(
         customer_id=matched_customer.customer_id,
         name=matched_customer.name,
         email=matched_customer.email,
@@ -161,6 +167,7 @@ async def refresh_token_endpoint(
     request: Request,
     response: Response,
     payload: RefreshTokenRequest | None = None,
+    validator: JWTValidator = Depends(get_jwt_validator),
 ) -> RefreshResponse:
     """Validate refresh token from cookies (or payload) and issue new in-memory access token strictly without PII."""
     refresh_token = (
@@ -175,7 +182,7 @@ async def refresh_token_endpoint(
         )
 
     try:
-        result = jwt_validator.refresh_access_token(refresh_token)
+        result = validator.refresh_access_token(refresh_token)
     except (AuthenticationError, TokenExpiredError) as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -208,6 +215,7 @@ async def logout_endpoint(
     request: Request,
     response: Response,
     authorization: Annotated[str | None, Header()] = None,
+    validator: JWTValidator = Depends(get_jwt_validator),
 ) -> dict[str, str]:
     """Blacklist refresh token and access token, and clear client cookies."""
     # 1. Retrieve tokens from cookies or headers
@@ -221,9 +229,9 @@ async def logout_endpoint(
 
     # 2. Blacklist tokens in server memory/redis store
     if refresh_token:
-        await jwt_validator.blacklist_mgr.blacklist_token(refresh_token, expiry_seconds=7 * 86400)
+        await validator.blacklist_mgr.blacklist_token(refresh_token, expiry_seconds=7 * 86400)
     if access_token:
-        await jwt_validator.blacklist_mgr.blacklist_token(access_token, expiry_seconds=3600)
+        await validator.blacklist_mgr.blacklist_token(access_token, expiry_seconds=3600)
 
     # 3. Clear cookies on the client side
     response.delete_cookie(key="access_token", path="/")
@@ -265,6 +273,8 @@ async def chat_endpoint(
     request: ChatRequest,
     current_user: CurrentUser,
     idempotency_key_header: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+    pipeline: ChatPipeline = Depends(get_chat_pipeline),
+    idempotency_mgr: IdempotencyManager = Depends(get_idempotency_manager),
 ) -> ChatResponse | StreamingResponse:
     """Process incoming chat query through PII filter, Coordinator, and Domain Agents with idempotency protection."""
     session_uuid = request.session_id or uuid4()
@@ -397,6 +407,7 @@ async def chat_endpoint(
 )
 async def list_chat_sessions(
     current_user: CurrentUser,
+    memory_manager: ConversationMemoryManager = Depends(get_memory_manager),
 ) -> ChatSessionListResponse:
     """Retrieve all chat sessions owned by the authenticated customer from PostgreSQL / SQLite."""
     records = await memory_manager.checkpointer.list_customer_sessions(current_user.customer_id)
@@ -421,6 +432,7 @@ async def list_chat_sessions(
 async def delete_chat_session(
     session_id: str,
     current_user: CurrentUser,
+    memory_manager: ConversationMemoryManager = Depends(get_memory_manager),
 ) -> dict[str, str]:
     """Delete a chat session owned by the authenticated customer."""
     deleted = await memory_manager.checkpointer.delete_session(session_id, current_user.customer_id)
@@ -438,6 +450,7 @@ async def delete_chat_session(
 async def get_chat_history(
     session_id: str,
     _current_user: AuthenticatedUser = Depends(get_current_user),
+    memory_manager: ConversationMemoryManager = Depends(get_memory_manager),
 ) -> ConversationHistoryResponse:
     """Fetch past conversation messages for the current session from database or Redis."""
     session_id_str = session_id
