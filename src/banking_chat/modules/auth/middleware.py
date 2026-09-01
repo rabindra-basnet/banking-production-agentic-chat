@@ -1,4 +1,4 @@
-"""FastAPI authentication middleware enforcing in-memory Bearer token verification and path-isolated refresh tokens."""
+"""FastAPI authentication middleware enforcing strict production Bearer token validation."""
 
 from __future__ import annotations
 
@@ -9,19 +9,25 @@ from fastapi import Depends, Header, HTTPException, Request, Response, status
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
+from banking_chat.core.config.settings import get_settings
 from banking_chat.modules.auth.jwt_validator import JWTValidator
 
-_validator = JWTValidator()
+
+def get_jwt_validator() -> JWTValidator:
+    """Dependency injector for JWTValidator ensuring fresh runtime settings."""
+    return JWTValidator()
 
 
 async def get_current_user(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
+    validator: Annotated[JWTValidator, Depends(get_jwt_validator)] = None,
 ) -> AuthenticatedUser:
     """Extract and validate JWT access token strictly from in-memory Authorization Bearer header (or cookie fallback)."""
+    settings = get_settings()
     token = None
 
-    # 1. Primary: Extract access_token from Authorization: Bearer <token> header (In-Memory JS state)
+    # 1. Primary: Extract access_token from Authorization: Bearer <token> header (In-Memory JS client state)
     if authorization:
         parts = authorization.split()
         if len(parts) == 2 and parts[0].lower() == "bearer":
@@ -31,12 +37,19 @@ async def get_current_user(
     if not token and "access_token" in request.cookies:
         token = request.cookies.get("access_token")
 
+    # 3. Production Protection: Reject requests without token strictly with 401
     if not token:
-        # Development fallback user if no auth token is provided in non-production
+        if settings.app_env == "production":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required. No active session token found.",
+            )
+        # Development-only fallback user
         return _default_demo_user()
 
+    jwt_val = validator or JWTValidator()
     try:
-        return _validator.validate_token(token)
+        return jwt_val.validate_token(token)
     except TokenExpiredError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
