@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import type { UserProfile, ChatSession, ChatMessage, AppConfig } from '@/shared/types';
 import { LoginForm } from '@/features/auth/components/LoginForm';
 import { checkAuthSession, logoutUser } from '@/features/auth/api';
-import { fetchAppConfig, DEFAULT_CONFIG } from '@/shared/api/config';
+import { fetchAppConfig, getCachedAppConfig } from '@/shared/api/config';
 import { fetchServerSessions, fetchSessionHistory, deleteServerSession } from '@/features/chat/api';
 import { BankingSidebar } from '@/features/sidebar/components/BankingSidebar';
 import { ChatView } from '@/features/chat/components/ChatView';
 
 export default function App() {
-  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<AppConfig>(() => getCachedAppConfig());
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const cached = localStorage.getItem('nepalbank_user');
     if (cached) {
