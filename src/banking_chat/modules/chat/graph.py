@@ -45,19 +45,20 @@ class ChatPipeline:
         # Step 1: PII Redaction & Tokenization
         redaction = self.redactor.tokenize(user_message)
 
-        # Step 2: Route intent
-        target_agent = self.coordinator.route_query(user_message, user)
+        # Step 2: Context Retrieval & Routing Intent
+        past_history = await self.memory_manager.get_history(session_id)
+        target_agent = self.coordinator.route_query(user_message, user, history=past_history)
 
         # Step 3: Execute target domain agent
         agent_resp: str
         if target_agent == AgentName.ACCOUNTS:
-            agent_resp = await self.accounts_agent.run(user_message, user)
+            agent_resp = await self.accounts_agent.run(user_message, user, history=past_history)
         elif target_agent == AgentName.TRANSACTION:
-            agent_resp = await self.transactions_agent.run(user_message, user)
+            agent_resp = await self.transactions_agent.run(user_message, user, history=past_history)
         elif target_agent == AgentName.SERVICE:
-            agent_resp = await self.services_agent.run(user_message, user)
+            agent_resp = await self.services_agent.run(user_message, user, history=past_history)
         else:
-            agent_resp = await self.accounts_agent.run(user_message, user)
+            agent_resp = await self.accounts_agent.run(user_message, user, history=past_history)
 
         # Step 4: Detokenize response if necessary
         final_resp = self.redactor.detokenize(agent_resp, redaction.token_map)

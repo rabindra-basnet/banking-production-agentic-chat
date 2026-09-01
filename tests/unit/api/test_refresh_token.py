@@ -1,0 +1,34 @@
+"""Unit tests for Refresh Token Endpoint with Cookies."""
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from banking_chat.core.common.types import CustomerTier
+from banking_chat.main import app
+from banking_chat.modules.auth.jwt_validator import JWTValidator
+
+
+@pytest.mark.asyncio
+async def test_auth_refresh_endpoint_cookie() -> None:
+    validator = JWTValidator()
+    pair = validator.create_token_pair(
+        customer_id="CIF908123",
+        name="Rabindra Basnet",
+        email="rabindra.basnet@example.com.np",
+        tier=CustomerTier.STANDARD,
+        accounts=["0120100056781234", "0120100056785678"],
+    )
+    refresh_token = pair["refresh_token"]
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Pass refresh token in cookies
+        client.cookies.set("refresh_token", refresh_token)
+        resp = await client.post("/api/v1/auth/refresh")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "access_token" in data
+        assert data["token_type"] == "Bearer"
+        assert isinstance(data["expires_in"], int)
+        assert data["expires_in"] > 0
+        assert "customer_id" not in data  # PII & customer profile strictly retrieved via /auth/me
+        assert "refresh_token" in resp.cookies

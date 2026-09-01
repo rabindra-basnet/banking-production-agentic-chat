@@ -1,4 +1,4 @@
-"""JWT validation and generation engine supporting Access/Refresh token pairs."""
+"""JWT validation and generation engine supporting Access/Refresh token pairs and token blacklisting."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ from uuid import UUID, uuid4
 from jose import JWTError, jwt
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
+from banking_chat.core.common.token_blacklist import TokenBlacklistManager
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
 from banking_chat.core.config.settings import get_settings
-from banking_chat.modules.auth.models import TokenPayload
+from banking_chat.modules.auth.models import TokenPairDict, TokenPayload
 
 
 class JWTValidator:
@@ -23,6 +24,7 @@ class JWTValidator:
         self.issuer = settings.auth_idp_issuer
         self.access_expiry_minutes = settings.auth_access_token_expiry_minutes
         self.refresh_expiry_days = settings.auth_refresh_token_expiry_days
+        self.blacklist_mgr = TokenBlacklistManager()
 
     def create_token_pair(
         self,
@@ -31,7 +33,7 @@ class JWTValidator:
         email: str = "rajesh.kumar@example.com",
         tier: CustomerTier = CustomerTier.STANDARD,
         accounts: list[str] | None = None,
-    ) -> dict[str, str | int]:
+    ) -> TokenPairDict:
         """Generate a short-lived access token and a long-lived refresh token pair."""
         now = datetime.now(UTC)
         user_id = str(uuid4())
@@ -77,6 +79,7 @@ class JWTValidator:
             "refresh_token": refresh_token,
             "token_type": "Bearer",
             "expires_in": self.access_expiry_minutes * 60,
+            "cif": customer_id,
         }
 
     def create_mock_token(
@@ -86,15 +89,12 @@ class JWTValidator:
         email: str = "rajesh.kumar@example.com",
         tier: CustomerTier = CustomerTier.STANDARD,
         accounts: list[str] | None = None,
-        expires_delta: timedelta | None = None,
     ) -> str:
-        """Create a signed JWT access token for development and testing."""
+        """Create a mock JWT for local development / testing."""
         now = datetime.now(UTC)
-        expiry = now + (expires_delta or timedelta(minutes=self.access_expiry_minutes))
-        user_id = str(uuid4())
-
+        exp = now + timedelta(minutes=self.access_expiry_minutes)
         payload = {
-            "sub": user_id,
+            "sub": str(uuid4()),
             "cif": customer_id,
             "name": name,
             "email": email,
@@ -102,7 +102,7 @@ class JWTValidator:
             "accounts": accounts or ["XXXXXXXXXXXX1234", "XXXXXXXXXXXX5678"],
             "roles": ["customer"],
             "token_type": "access",
-            "exp": expiry,
+            "exp": exp,
             "iat": now,
             "iss": self.issuer,
             "aud": "banking-chat-app",
@@ -110,8 +110,12 @@ class JWTValidator:
         token: str = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
         return token
 
-    def refresh_access_token(self, refresh_token: str) -> dict[str, str | int]:
+    def refresh_access_token(self, refresh_token: str) -> TokenPairDict:
         """Validate a refresh token and issue a new access and rotated refresh token pair."""
+        # 1. Check if token is blacklisted
+        if self.blacklist_mgr.is_blacklisted_sync(refresh_token):
+            raise AuthenticationError("Refresh token has been revoked / blacklisted.")
+
         try:
             payload = jwt.decode(
                 refresh_token,
@@ -137,6 +141,10 @@ class JWTValidator:
 
     def validate_token(self, token: str) -> AuthenticatedUser:
         """Validate JWT access token and return AuthenticatedUser."""
+        # 1. Check blacklist
+        if self.blacklist_mgr.is_blacklisted_sync(token):
+            raise AuthenticationError("Access token has been revoked / logged out.")
+
         try:
             payload_dict = jwt.decode(
                 token,

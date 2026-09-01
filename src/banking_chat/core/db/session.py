@@ -19,7 +19,7 @@ def get_engine() -> AsyncEngine:
         settings = get_settings()
         _engine = create_async_engine(
             settings.database_url,
-            echo=(settings.app_env == "development"),
+            echo=False,
             future=True,
         )
     return _engine

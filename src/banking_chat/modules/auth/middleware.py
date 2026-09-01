@@ -1,41 +1,59 @@
-"""FastAPI authentication middleware and user dependency injection."""
+"""FastAPI authentication middleware enforcing strict production Bearer token validation."""
 
 from __future__ import annotations
 
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
+from banking_chat.core.config.settings import get_settings
 from banking_chat.modules.auth.jwt_validator import JWTValidator
 
-_validator = JWTValidator()
+
+def get_jwt_validator() -> JWTValidator:
+    """Dependency injector for JWTValidator ensuring fresh runtime settings."""
+    return JWTValidator()
 
 
 async def get_current_user(
+    request: Request,
     authorization: Annotated[str | None, Header()] = None,
+    validator: JWTValidator = Depends(get_jwt_validator),
 ) -> AuthenticatedUser:
-    """Extract and validate the current authenticated user from Authorization header."""
-    if not authorization:
-        # Development fallback user if no auth header is provided in non-production
+    """Extract and validate JWT access token strictly from in-memory Authorization Bearer header (or cookie fallback)."""
+    settings = get_settings()
+    token = None
+
+    # 1. Primary: Extract access_token from Authorization: Bearer <token> header (In-Memory JS client state)
+    if authorization:
+        parts = authorization.split()
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            token = parts[1]
+
+    # 2. Secondary fallback for SSR / cookie clients
+    if not token and "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
+
+    # 3. Production Protection: Reject requests without token strictly with 401
+    if not token:
+        if settings.app_env == "production":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required. No active session token found.",
+            )
+        # Development-only fallback user
         return _default_demo_user()
 
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid Authorization header format. Must be Bearer <token>",
-        )
-
-    token = parts[1]
+    jwt_val = validator or JWTValidator()
     try:
-        return _validator.validate_token(token)
+        return jwt_val.validate_token(token)
     except TokenExpiredError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired",
+            detail="Access token expired. Please refresh session.",
         ) from err
     except AuthenticationError as err:
         raise HTTPException(
@@ -44,20 +62,21 @@ async def get_current_user(
         ) from err
 
 
+# Type alias for current authenticated user dependency
+CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
+
+
 def _default_demo_user() -> AuthenticatedUser:
     """Fallback user for local development without active token."""
     from datetime import UTC, datetime, timedelta
 
     return AuthenticatedUser(
         user_id=uuid4(),
-        customer_id="CIF001234",
-        name="Rajesh Kumar",
-        email="rajesh.kumar@example.com",
+        customer_id="CIF908123",
+        name="Rabindra Basnet",
+        email="rabindra.basnet@example.com.np",
         tier=CustomerTier.STANDARD,
-        accounts=["XXXXXXXXXXXX1234", "XXXXXXXXXXXX5678"],
+        accounts=["0120100056781234", "0120100056785678"],
         session_id=uuid4(),
         token_expiry=datetime.now(UTC) + timedelta(hours=1),
     )
-
-
-CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]

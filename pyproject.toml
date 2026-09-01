@@ -33,6 +33,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.12",
     "pyyaml>=6.0.2",
+    "aiosqlite>=0.22.1",
 ]
 
 [project.optional-dependencies]
