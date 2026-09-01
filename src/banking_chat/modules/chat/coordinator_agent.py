@@ -1,4 +1,4 @@
-"""Coordinator Agent orchestrating multi-agent routing and safety checks."""
+"""Coordinator Agent orchestrating multi-agent routing and safety checks for banking in Nepal."""
 
 from __future__ import annotations
 
@@ -21,6 +21,9 @@ class CoordinatorAgent:
             "stolen",
             "lost",
             "kyc",
+            "citizenship",
+            "nid",
+            "rastriya parichayapatra",
             "address",
             "dispute",
             "ticket",
@@ -39,15 +42,21 @@ class CoordinatorAgent:
             "spending",
             "transfer",
             "transfers",
-            "upi",
-            "neft",
-            "rtgs",
-            "imps",
+            "fonepay",
+            "connectips",
+            "esewa",
+            "khalti",
+            "npi",
+            "atm",
+            "qr",
             "charge",
             "charges",
             "payment",
             "payments",
             "paid",
+            "upi",
+            "neft",
+            "rtgs",
         ],
         AgentName.ACCOUNTS: [
             "balance",
@@ -59,13 +68,17 @@ class CoordinatorAgent:
             "current",
             "fd",
             "fixed deposit",
+            "muddati",
+            "muddati khata",
             "rd",
             "recurring deposit",
-            "ifsc",
             "branch",
             "holding",
             "holdings",
             "summary",
+            "npr",
+            "rupee",
+            "rupees",
         ],
     }
 

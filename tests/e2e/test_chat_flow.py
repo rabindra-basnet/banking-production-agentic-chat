@@ -25,20 +25,17 @@ async def test_health_endpoint() -> None:
 @pytest.mark.asyncio
 async def test_auth_refresh_token_flow() -> None:
     validator = JWTValidator()
-    pair = validator.create_token_pair(customer_id="CIF999111", name="Vikram Sen")
+    pair = validator.create_token_pair(customer_id="CIF908123", name="Rabindra Basnet")
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        resp = await client.post(
-            "/api/v1/auth/refresh",
-            json={"refresh_token": str(pair["refresh_token"])},
-        )
+        client.cookies.set("refresh_token", str(pair["refresh_token"]))
+        resp = await client.post("/api/v1/auth/refresh")
         assert resp.status_code == 200
         data = resp.json()
-        assert "access_token" in data
-        assert "refresh_token" in data
-        assert data["token_type"] == "Bearer"
-        assert data["access_token"] != pair["access_token"]
+        assert data["customer_id"] == "CIF908123"
+        assert "access_token" not in data  # Transmitted securely via HttpOnly cookie
+        assert "access_token" in resp.cookies
 
 
 @pytest.mark.asyncio

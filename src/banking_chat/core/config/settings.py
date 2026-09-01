@@ -1,4 +1,4 @@
-"""Application settings using Pydantic Settings for environment-based configuration."""
+"""Application settings using Pydantic Settings for multi-tenant SaaS banking configurations."""
 
 from __future__ import annotations
 
@@ -16,6 +16,20 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+    )
+
+    # ─── Multi-Tenant Banking Brand & SaaS Whitelabel Config ───
+    bank_name: str = Field(default="NepalBank AI", description="Bank/Institution Brand Name")
+    bank_tagline: str = Field(default="Nepal Banking Assistant", description="Bank Brand Tagline")
+    bank_badge: str = Field(default="NRB", description="Regulatory / Institution Badge (e.g. NRB, RBI, MAS)")
+    assistant_name: str = Field(default="NepalBank Assistant", description="Customer-facing Assistant Name")
+    compliance_notice: str = Field(
+        default="Nepal Rastra Bank compliant",
+        description="Regulatory compliance text displayed in greeting",
+    )
+    supported_services: str = Field(
+        default="accounts, Fonepay QR payments, ConnectIPS transfers, or card protection",
+        description="List of supported banking services in welcome message",
     )
 
     # Application
@@ -55,7 +69,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
     redis_session_ttl_seconds: int = Field(default=1800, description="Session TTL (30 min)")
 
-    # PostgreSQL
+    # PostgreSQL / SQLite
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/banking_chat", description="Database URL"
     )
