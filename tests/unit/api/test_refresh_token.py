@@ -25,7 +25,9 @@ async def test_auth_refresh_endpoint_cookie() -> None:
         resp = await client.post("/api/v1/auth/refresh")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["customer_id"] == "CIF908123"
-        assert data["name"] == "Rabindra Basnet"
         assert "access_token" in data
+        assert data["token_type"] == "Bearer"
+        assert isinstance(data["expires_in"], int)
+        assert data["expires_in"] > 0
+        assert "customer_id" not in data  # PII & customer profile strictly retrieved via /auth/me
         assert "refresh_token" in resp.cookies

@@ -20,9 +20,11 @@ from banking_chat.modules.auth.jwt_validator import JWTValidator
 from banking_chat.modules.auth.middleware import CurrentUser, get_current_user
 from banking_chat.modules.auth.models import (
     LoginRequest,
+    RefreshResponse,
     RefreshTokenRequest,
     Role,
     TokenResponse,
+    UserProfileResponse,
     UserProfileSchema,
 )
 from banking_chat.modules.chat.graph import ChatPipeline
@@ -155,16 +157,16 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
 
 @router.get(
     "/auth/me",
-    response_model=TokenResponse,
+    response_model=UserProfileResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get current authenticated user session profile from Bearer token or cookies",
+    summary="Get current authenticated user session profile from Bearer token",
 )
 async def get_current_user_profile(
     current_user: CurrentUser,
-) -> TokenResponse:
-    """Validate current session from in-memory token or cookie and return customer profile."""
+) -> UserProfileResponse:
+    """Validate current session from in-memory token and return customer profile."""
     user_info = CUSTOMER_DIRECTORY.get(current_user.customer_id, CUSTOMER_DIRECTORY["CIF908123"])
-    return TokenResponse(
+    return UserProfileResponse(
         customer_id=current_user.customer_id,
         name=current_user.name,
         email=current_user.email,
@@ -176,7 +178,7 @@ async def get_current_user_profile(
 
 @router.post(
     "/auth/refresh",
-    response_model=TokenResponse,
+    response_model=RefreshResponse,
     status_code=status.HTTP_200_OK,
     summary="Refresh an expired access token using HttpOnly cookie refresh token",
 )
@@ -184,8 +186,8 @@ async def refresh_token_endpoint(
     request: Request,
     response: Response,
     payload: RefreshTokenRequest | None = None,
-) -> TokenResponse:
-    """Validate refresh token from cookies (or payload) and issue new in-memory access token."""
+) -> RefreshResponse:
+    """Validate refresh token from cookies (or payload) and issue new in-memory access token strictly without PII."""
     refresh_token = (
         request.cookies.get("refresh_token")
         or (payload.refresh_token if payload else None)
@@ -204,7 +206,6 @@ async def refresh_token_endpoint(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(err),
         ) from err
-    user_info = CUSTOMER_DIRECTORY.get(result.get("cif", "CIF908123"), CUSTOMER_DIRECTORY["CIF908123"])
 
     response.set_cookie(
         key="refresh_token",
@@ -216,15 +217,10 @@ async def refresh_token_endpoint(
         path="/api/v1/auth",
     )
 
-    return TokenResponse(
+    return RefreshResponse(
         access_token=str(result["access_token"]),
-        csrf_token=str(result["access_token"])[:16],
-        customer_id=user_info.customer_id,
-        name=user_info.name,
-        email=user_info.email,
-        role=str(user_info.role),
-        tier=str(user_info.tier),
-        accounts=user_info.accounts,
+        token_type="Bearer",
+        expires_in=int(result.get("expires_in", 900)),
     )
 
 

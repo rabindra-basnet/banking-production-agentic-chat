@@ -33,8 +33,9 @@ async def test_auth_refresh_token_flow() -> None:
         resp = await client.post("/api/v1/auth/refresh")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["customer_id"] == "CIF908123"
-        assert "access_token" in data  # Returned in response for in-memory JS client storage
+        assert "access_token" in data
+        assert data["token_type"] == "Bearer"
+        assert "customer_id" not in data
         assert "refresh_token" in resp.cookies
 
 

@@ -92,8 +92,27 @@ class RefreshTokenRequest(StrictBaseModel):
     refresh_token: str | None = Field(default=None, description="Optional refresh token if not in cookies")
 
 
+class RefreshResponse(StrictBaseModel):
+    """Standard OAuth2/OIDC refresh response returning strictly access token and expiration."""
+
+    access_token: str = Field(description="Short-lived JWT access token stored in JS client memory")
+    token_type: str = Field(default="Bearer", description="OAuth2 token type")
+    expires_in: int = Field(default=900, description="Access token expiration window in seconds")
+
+
+class UserProfileResponse(StrictBaseModel):
+    """User profile and banking account details returned by /auth/me."""
+
+    customer_id: str = Field(default="CIF908123", description="Authenticated Customer ID")
+    name: str = Field(default="Customer", description="Full Name")
+    email: str = Field(default="", description="Email address")
+    role: str = Field(default="customer", description="Authorization role: customer | support_agent | admin")
+    tier: str = Field(default="standard", description="Customer Tier")
+    accounts: list[str] = Field(default_factory=list, description="Associated Bank Accounts")
+
+
 class TokenResponse(StrictBaseModel):
-    """Token response payload returned to client (access token returned in-memory, refresh token in HttpOnly cookie)."""
+    """SSO Login response payload containing access token and basic user info."""
 
     access_token: str = Field(default="", description="Short-lived JWT access token stored in JS client memory")
     csrf_token: str = Field(default="", description="Anti-CSRF token")
