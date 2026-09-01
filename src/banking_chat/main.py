@@ -128,10 +128,34 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-        logger.warning(f"HTTP exception on {request.url.path}: status={exc.status_code} detail={exc.detail}")
+        # 1. Always log full diagnostic detail in backend server logs
+        logger.warning(
+            f"HTTP exception on {request.method} {request.url.path}: status={exc.status_code} detail={exc.detail}"
+        )
+
+        # 2. In development, provide exact detail; in production, sanitize client response
+        if settings.app_env == "development":
+            client_msg = exc.detail
+        else:
+            # Clean standard production status descriptions
+            status_messages = {
+                400: "Bad Request",
+                401: "Authentication required or session expired",
+                403: "Access forbidden",
+                404: "Requested resource not found",
+                405: "Method not allowed",
+                422: "Unprocessable request payload",
+                429: "Too many requests. Please try again later.",
+            }
+            client_msg = status_messages.get(exc.status_code, "A client request error occurred")
+
         return JSONResponse(
             status_code=exc.status_code,
-            content={"error": "HTTPException", "message": exc.detail, "code": f"HTTP_{exc.status_code}"},
+            content={
+                "status": exc.status_code,
+                "message": client_msg,
+                "code": f"HTTP_{exc.status_code}",
+            },
             headers=exc.headers,
         )
 
