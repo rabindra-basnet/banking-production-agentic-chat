@@ -112,6 +112,9 @@ def setup_logging(
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(line_formatter)
 
+    # Exclude verbose DB query engine logs from app.log (diverted strictly to logs/db.log if needed)
+    app_handler.addFilter(lambda record: not record.name.startswith("sqlalchemy.engine"))
+
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
     root_logger.handlers = [console_handler, app_handler, error_handler]
@@ -131,8 +134,8 @@ def setup_logging(
             target_logger = logging.getLogger(prefix)
             target_logger.addHandler(module_file_handler)
 
-    # Suppress noisy lower-level worker thread logs
-    for logger_name in ("httpx", "httpcore", "urllib3", "asyncio", "aiosqlite"):
+    # Suppress noisy SQL queries and low-level transport engine logs
+    for logger_name in ("sqlalchemy.engine", "sqlalchemy.pool", "sqlalchemy.dialects", "httpx", "httpcore", "urllib3", "asyncio", "aiosqlite"):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     logging.getLogger("banking_chat").setLevel(level)
