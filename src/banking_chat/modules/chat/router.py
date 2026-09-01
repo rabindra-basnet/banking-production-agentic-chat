@@ -129,17 +129,6 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
         accounts=[acc.split(" ")[0] for acc in matched_customer.accounts],
     )
 
-    # Set access token in Secure SameSite Cookie
-    response.set_cookie(
-        key="access_token",
-        value=pair["access_token"],
-        httponly=True,
-        samesite="lax",
-        secure=False,  # Set to True on HTTPS/Production
-        max_age=3600,
-        path="/",
-    )
-
     # Set refresh token in Secure SameSite Cookie (Isolated to auth refresh path)
     response.set_cookie(
         key="refresh_token",

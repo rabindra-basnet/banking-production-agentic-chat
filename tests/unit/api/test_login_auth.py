@@ -17,8 +17,9 @@ async def test_banking_login_cif() -> None:
         assert data["customer_id"] == "CIF908123"
         assert data["name"] == "Rabindra Basnet"
         assert len(data["accounts"]) == 2
-        assert "access_token" in resp.cookies
+        assert "access_token" in data
         assert "refresh_token" in resp.cookies
+        assert "access_token" not in resp.cookies
 
 
 @pytest.mark.asyncio
