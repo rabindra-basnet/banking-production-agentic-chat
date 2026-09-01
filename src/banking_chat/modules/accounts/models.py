@@ -23,10 +23,10 @@ class BankAccountModel(Base):
     account_number: Mapped[str] = mapped_column(String(32), unique=True, index=True, nullable=False)
     account_type: Mapped[str] = mapped_column(String(32), nullable=False, default="savings")
     balance: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal("0.00"))
-    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="NPR")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
-    branch_name: Mapped[str] = mapped_column(String(128), nullable=False, default="Main Branch")
-    ifsc_code: Mapped[str] = mapped_column(String(11), nullable=False, default="BANK0000001")
+    branch_name: Mapped[str] = mapped_column(String(128), nullable=False, default="Kathmandu Main Branch")
+    ifsc_code: Mapped[str] = mapped_column(String(11), nullable=False, default="NBL0000001")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

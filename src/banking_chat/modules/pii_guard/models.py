@@ -11,11 +11,12 @@ from pydantic import BaseModel, ConfigDict, Field
 class PIIType(StrEnum):
     """Supported Personally Identifiable Information types."""
 
+    NID = "NP_NID_CITIZENSHIP"
     AADHAAR = "IN_AADHAAR"
     PAN = "IN_PAN"
-    BANK_ACCOUNT = "IN_BANK_ACCOUNT"
-    IFSC = "IN_IFSC"
-    UPI_ID = "IN_UPI_ID"
+    BANK_ACCOUNT = "BANK_ACCOUNT"
+    IFSC = "BRANCH_SWIFT_CODE"
+    UPI_ID = "DIGITAL_WALLET_VPA"
     PHONE = "PHONE_NUMBER"
     EMAIL = "EMAIL_ADDRESS"
     CREDIT_CARD = "CREDIT_CARD"
@@ -51,6 +52,6 @@ class RedactionResult(BaseModel):
     redacted_text: str = Field(description="Sanitized text with tokens or masks")
     token_map: dict[str, str] = Field(
         default_factory=dict,
-        description="Mapping from surrogate token (e.g. {{PII_AADHAAR_1}}) to raw value",
+        description="Mapping from surrogate token to raw value",
     )
     metadata: dict[str, Any] = Field(default_factory=dict, description="Redaction operation metadata")

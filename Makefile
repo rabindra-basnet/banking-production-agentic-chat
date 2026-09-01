@@ -1,4 +1,4 @@
-.PHONY: help install lint format type-check test test-unit test-integration security-scan run clean
+.PHONY: help install lint format type-check test test-unit test-integration security-scan run clean dev seed
 
 # Default target
 help: ## Show this help message
@@ -98,11 +98,14 @@ run-mcp-services: ## Run Services FastMCP standalone server (port 9003)
 docker-build: ## Build Docker image
 	docker build -f deploy/docker/Dockerfile -t banking-agentic-chat .
 
-docker-up: ## Start all services with Docker Compose
+docker-up: ## Start all services with Docker Compose (API + Redis + Postgres)
 	docker compose -f deploy/docker/docker-compose.yml up -d
 
-docker-down: ## Stop all services
+docker-down: ## Stop all Docker Compose services
 	docker compose -f deploy/docker/docker-compose.yml down
+
+docker-logs: ## View Docker Compose logs
+	docker compose -f deploy/docker/docker-compose.yml logs -f
 
 podman-build: ## Build Podman image
 	podman build -f deploy/docker/Dockerfile -t banking-agentic-chat .
@@ -110,10 +113,10 @@ podman-build: ## Build Podman image
 podman-up: ## Start all services with Podman Compose
 	podman-compose -f deploy/docker/docker-compose.yml up -d
 
-podman-down: ## Stop all services with Podman Compose
+podman-down: ## Stop all Podman Compose services
 	podman-compose -f deploy/docker/docker-compose.yml down
 
-# ─── Cleanup ───
+# ─── Clean ───
 
 clean: ## Clean build artifacts
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -122,3 +125,11 @@ clean: ## Clean build artifacts
 	find . -type d -name htmlcov -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name *.egg-info -exec rm -rf {} + 2>/dev/null || true
 	rm -rf dist/ build/ .coverage
+
+# ─── Full Stack Development (Procfile) ───
+
+dev: ## Start backend, frontend, and MCP microservices with honcho
+	honcho start
+
+seed: ## Seed database with Nepali dummy banking data
+	uv run python scripts/seed_db.py

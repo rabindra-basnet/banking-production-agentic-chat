@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from banking_chat.core.config.constants import MAX_CONVERSATION_HISTORY
 from banking_chat.modules.session_memory.postgres_checkpointer import PostgresCheckpointer
 from banking_chat.modules.session_memory.redis_store import RedisSessionStore
+
+logger = logging.getLogger("banking_chat.modules.session_memory")
 
 
 class ConversationMemoryManager:
@@ -23,11 +26,24 @@ class ConversationMemoryManager:
         self.max_history = max_history
 
     async def get_history(self, session_id: str) -> list[dict[str, Any]]:
-        """Retrieve recent conversation messages."""
+        """Retrieve recent conversation messages from Redis cache, falling back to Postgres."""
         cached = await self.redis_store.get_session(session_id)
         if cached and "messages" in cached:
             messages: list[dict[str, Any]] = cached["messages"]
+            logger.debug("History loaded from Redis cache for session %s (%d messages)", session_id, len(messages))
             return messages
+
+        # Fallback: load from Postgres and warm the Redis cache
+        record = await self.checkpointer.get_session_record(session_id)
+        if record and record.messages:
+            messages = record.messages
+            logger.info(
+                "History loaded from Postgres for session %s (%d messages, cache warmed)", session_id, len(messages)
+            )
+            await self.redis_store.save_session(session_id, {"messages": messages})
+            return messages
+
+        logger.debug("No history found for session %s", session_id)
         return []
 
     async def append_message(

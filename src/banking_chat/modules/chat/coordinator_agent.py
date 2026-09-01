@@ -1,4 +1,4 @@
-"""Coordinator Agent orchestrating multi-agent routing and safety checks."""
+"""Context-Aware Coordinator Agent orchestrating multi-agent routing using conversation history and semantic intent."""
 
 from __future__ import annotations
 
@@ -9,88 +9,168 @@ from banking_chat.core.common.types import AgentName, AuthenticatedUser
 
 
 class CoordinatorAgent:
-    """Classifies user intent and routes to specialized domain agents."""
+    """Classifies user intent and routes to specialized domain agents using context memory, urgency rules, and domain heuristics."""
 
-    ROUTING_KEYWORDS: dict[AgentName, list[str]] = {
-        AgentName.SERVICE: [
-            "block",
-            "card",
-            "cheque",
-            "checkbook",
-            "check book",
-            "stolen",
-            "lost",
-            "kyc",
-            "address",
-            "dispute",
-            "ticket",
-            "issue",
-            "service",
-            "complaint",
-        ],
-        AgentName.TRANSACTION: [
-            "transaction",
-            "transactions",
-            "statement",
-            "history",
-            "debit",
-            "credit",
-            "spent",
-            "spending",
-            "transfer",
-            "transfers",
-            "upi",
-            "neft",
-            "rtgs",
-            "imps",
-            "charge",
-            "charges",
-            "payment",
-            "payments",
-            "paid",
-        ],
-        AgentName.ACCOUNTS: [
-            "balance",
-            "balances",
-            "account",
-            "accounts",
-            "saving",
-            "savings",
-            "current",
-            "fd",
-            "fixed deposit",
-            "rd",
-            "recurring deposit",
-            "ifsc",
-            "branch",
-            "holding",
-            "holdings",
-            "summary",
-        ],
+    ROUTING_DOMAINS: dict[AgentName, dict[str, Any]] = {
+        AgentName.SERVICE: {
+            "description": "Urgent card blocking, cheque books, KYC updates, dispute raising, account freeze/unfreeze",
+            "urgent_indicators": ["lost", "stolen", "block", "fraud", "scam", "unauthorized", "freeze", "compromised"],
+            "keywords": [
+                "block",
+                "card",
+                "debit card",
+                "credit card",
+                "cheque",
+                "chequebook",
+                "checkbook",
+                "check book",
+                "stolen",
+                "lost",
+                "kyc",
+                "citizenship",
+                "nid",
+                "rastriya parichayapatra",
+                "address",
+                "dispute",
+                "ticket",
+                "issue",
+                "service",
+                "complaint",
+                "unfreeze",
+                "reissue",
+                "pin reset",
+            ],
+        },
+        AgentName.TRANSACTION: {
+            "description": "Fund transfers, Fonepay QR, ConnectIPS, mini-statements, transaction logs, debits & credits",
+            "keywords": [
+                "transaction",
+                "transactions",
+                "statement",
+                "history",
+                "debit",
+                "credit",
+                "spent",
+                "spending",
+                "transfer",
+                "transfers",
+                "fonepay",
+                "connectips",
+                "esewa",
+                "khalti",
+                "npi",
+                "atm",
+                "qr",
+                "charge",
+                "charges",
+                "payment",
+                "payments",
+                "paid",
+                "send money",
+                "receive",
+                "remittance",
+                "upi",
+                "neft",
+                "rtgs",
+                "imps",
+            ],
+        },
+        AgentName.ACCOUNTS: {
+            "description": "Account balances, interest rates, Muddati Khata (Fixed Deposits), account details and branch lookup",
+            "keywords": [
+                "balance",
+                "balances",
+                "account",
+                "accounts",
+                "saving",
+                "savings",
+                "current",
+                "fd",
+                "fixed deposit",
+                "muddati",
+                "muddati khata",
+                "rd",
+                "recurring deposit",
+                "branch",
+                "holding",
+                "holdings",
+                "summary",
+                "npr",
+                "rupee",
+                "rupees",
+                "interest rate",
+                "cif",
+            ],
+        },
     }
 
-    def route_query(self, query: str, user: AuthenticatedUser, **kwargs: Any) -> AgentName:
-        """Analyze query keywords and user context to determine target agent."""
-        text = query.lower()
+    def route_query(
+        self,
+        query: str,
+        user: AuthenticatedUser,
+        history: list[dict[str, Any]] | None = None,
+        **kwargs: Any,
+    ) -> AgentName:
+        """Analyze query, conversation context memory, and user profile to accurately route to domain agents."""
+        text = query.lower().strip()
 
+        # 1. High Priority: Check for critical safety / emergency banking service events
+        for indicator in self.ROUTING_DOMAINS[AgentName.SERVICE]["urgent_indicators"]:
+            if re.search(rf"\b{re.escape(indicator)}\b", text):
+                return AgentName.SERVICE
+
+        # 2. General Identity & Greeting Intent: Do not blindly inherit previous service actions for "who are you", "help", "hello"
+        is_identity_or_greeting = any(
+            phrase in text
+            for phrase in [
+                "who are you",
+                "what is your name",
+                "what can you do",
+                "help",
+                "hello",
+                "hi",
+                "namaste",
+                "what are you",
+            ]
+        )
+        if is_identity_or_greeting:
+            return AgentName.ACCOUNTS
+
+        # 3. Context Continuity: Check recent conversation turn if query is short / conversational follow-up
+        recent_agent: AgentName | None = None
+        if history:
+            for past_msg in reversed(history[-4:]):
+                past_agent_str = past_msg.get("agent") or past_msg.get("metadata", {}).get("agent")
+                if past_agent_str:
+                    try:
+                        recent_agent = AgentName(past_agent_str)
+                        break
+                    except ValueError:
+                        pass
+
+        # 4. Calculate semantic scoring across domain categories
         scores: dict[AgentName, int] = {
             AgentName.SERVICE: 0,
             AgentName.TRANSACTION: 0,
             AgentName.ACCOUNTS: 0,
         }
 
-        # Check for card blocking / urgent services with highest priority
-        if "block" in text or "lost" in text or "stolen" in text or "cheque" in text:
-            scores[AgentName.SERVICE] += 5
-
-        for agent, keywords in self.ROUTING_KEYWORDS.items():
-            for kw in keywords:
+        for agent_name, domain_data in self.ROUTING_DOMAINS.items():
+            for kw in domain_data["keywords"]:
                 if re.search(rf"\b{re.escape(kw)}", text):
-                    scores[agent] += 1
+                    scores[agent_name] += 2
+
+        # 5. If query is ambiguous / follow-up, give weight to the ongoing context memory agent
+        if recent_agent and scores[recent_agent] == max(scores.values()):
+            scores[recent_agent] += 1
 
         best_agent = max(scores, key=lambda a: scores[a])
         if scores[best_agent] > 0:
             return best_agent
+
+        # 6. Follow-up context fallback if no direct keyword matched
+        if recent_agent:
+            return recent_agent
 
         # Default fallback
         return AgentName.ACCOUNTS

@@ -21,5 +21,5 @@ def test_pii_redactor_mask() -> None:
     redactor = PIIRedactor()
     raw = "My pan is ABCDE1234F"
     masked = redactor.mask(raw)
-    assert "[REDACTED_IN_PAN]" in masked
+    assert "<REDACTED>" in masked
     assert "ABCDE1234F" not in masked

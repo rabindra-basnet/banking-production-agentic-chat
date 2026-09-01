@@ -33,6 +33,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "python-multipart>=0.0.12",
     "pyyaml>=6.0.2",
+    "aiosqlite>=0.22.1",
 ]
 
 [project.optional-dependencies]
@@ -118,6 +119,8 @@ module = [
     "mcp.*",
     "mcp.server.fastmcp.*",
     "jose.*",
+    "presidio_analyzer.*",
+    "presidio_anonymizer.*",
 ]
 ignore_missing_imports = true
 

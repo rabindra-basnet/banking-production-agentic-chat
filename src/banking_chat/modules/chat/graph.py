@@ -2,16 +2,40 @@
 
 from __future__ import annotations
 
+import json
+import logging
 import time
+from typing import Any, Protocol
+
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
 from banking_chat.core.common.types import AgentName, AuthenticatedUser
 from banking_chat.modules.accounts.agent import AccountsAgent
 from banking_chat.modules.chat.coordinator_agent import CoordinatorAgent
 from banking_chat.modules.chat.state import ChatAgentState
+from banking_chat.modules.llm_gateway.router import LLMRouter
 from banking_chat.modules.pii_guard.redactor import PIIRedactor
 from banking_chat.modules.services.agent import ServiceAgent
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 from banking_chat.modules.transactions.agent import TransactionsAgent
+
+llm_logger = logging.getLogger("banking_chat.modules.llm_gateway")
+chat_logger = logging.getLogger("banking_chat.modules.chat")
+
+
+class DomainAgent(Protocol):
+    """Structural interface shared by all domain agents."""
+
+    system_prompt: str
+
+    async def run(self, user_message: str, user: AuthenticatedUser, **kwargs: Any) -> str: ...
+
+    async def get_tool_data(
+        self,
+        user_message: str,
+        user: AuthenticatedUser,
+        **kwargs: Any,
+    ) -> dict[str, Any] | None: ...
 
 
 class ChatPipeline:
@@ -25,6 +49,7 @@ class ChatPipeline:
         services_agent: ServiceAgent | None = None,
         redactor: PIIRedactor | None = None,
         memory_manager: ConversationMemoryManager | None = None,
+        llm_router: LLMRouter | None = None,
     ) -> None:
         self.coordinator = coordinator or CoordinatorAgent()
         self.accounts_agent = accounts_agent or AccountsAgent()
@@ -32,6 +57,7 @@ class ChatPipeline:
         self.services_agent = services_agent or ServiceAgent()
         self.redactor = redactor or PIIRedactor()
         self.memory_manager = memory_manager or ConversationMemoryManager()
+        self.llm_router = llm_router or LLMRouter()
 
     async def execute(
         self,
@@ -42,27 +68,119 @@ class ChatPipeline:
         """Run the full chat pipeline sequentially."""
         start_time = time.perf_counter()
 
-        # Step 1: PII Redaction & Tokenization
+        # ── Step 1: PII Redaction & Tokenization ──
+        llm_logger.info(
+            "[PII_GUARD] session=%s customer=%s | Input: %s",
+            session_id,
+            user.customer_id,
+            user_message,
+        )
         redaction = self.redactor.tokenize(user_message)
+        llm_logger.info(
+            "[PII_GUARD] session=%s | Redacted: %s | Token map: %s",
+            session_id,
+            redaction.redacted_text,
+            json.dumps(redaction.token_map),
+        )
 
-        # Step 2: Route intent
-        target_agent = self.coordinator.route_query(user_message, user)
+        # ── Step 2: Context Retrieval & Routing Intent ──
+        past_history = await self.memory_manager.get_history(session_id)
+        llm_logger.info(
+            "[ROUTER] session=%s | Loaded %d history messages for context",
+            session_id,
+            len(past_history),
+        )
 
-        # Step 3: Execute target domain agent
+        target_agent = self.coordinator.route_query(user_message, user, history=past_history)
+        llm_logger.info(
+            "[ROUTER] session=%s customer=%s | Routed to: %s | Query: %s",
+            session_id,
+            user.customer_id,
+            target_agent.value,
+            user_message,
+        )
+
+        # ── Step 3: Execute target domain agent ──
+        agent_input = redaction.redacted_text if redaction.redacted_text != user_message else user_message
+        llm_logger.info(
+            "[AGENT_INPUT] session=%s agent=%s | Content: %s",
+            session_id,
+            target_agent.value,
+            agent_input,
+        )
+
         agent_resp: str
-        if target_agent == AgentName.ACCOUNTS:
-            agent_resp = await self.accounts_agent.run(user_message, user)
-        elif target_agent == AgentName.TRANSACTION:
-            agent_resp = await self.transactions_agent.run(user_message, user)
-        elif target_agent == AgentName.SERVICE:
-            agent_resp = await self.services_agent.run(user_message, user)
+        tool_calls: list[str] = []
+        llm_cost: float = 0.0
+
+        domain_agents: dict[AgentName, DomainAgent] = {
+            AgentName.ACCOUNTS: self.accounts_agent,
+            AgentName.TRANSACTION: self.transactions_agent,
+            AgentName.SERVICE: self.services_agent,
+        }
+        agent: DomainAgent = domain_agents.get(target_agent, domain_agents[AgentName.ACCOUNTS])
+
+        tool_data = await agent.get_tool_data(agent_input, user, history=past_history)
+
+        if tool_data is not None:
+            # Agentic path: structured tool data → LLM generates natural language response
+            system_content = (
+                f"{agent.system_prompt}\n\n"
+                f"The following banking data has been retrieved from the system for the customer:\n"
+                f"{json.dumps(tool_data, indent=2, default=str)}"
+            )
+            messages: list[ChatCompletionMessageParam] = [
+                {"role": "system", "content": system_content},
+            ]
+            if past_history:
+                context_turns: list[ChatCompletionUserMessageParam] = []
+                for m in past_history[-6:]:
+                    context_turns.append(
+                        {
+                            "role": "user",
+                            "content": str(m.get("content", ""))[:500],
+                        }
+                    )
+                messages.append(
+                    {"role": "system", "content": "Recent conversation:\n" + json.dumps(context_turns, default=str)}
+                )
+            messages.append({"role": "user", "content": user_message})
+
+            agent_resp, llm_cost = await self.llm_router.route_and_generate(messages, user, session_id=session_id)
+            tool_calls = self._detect_tool_calls(target_agent, user_message)
+            llm_logger.info(
+                "[AGENT_THINKING] session=%s agent=%s | Tool selected: %s | LLM synthesized response",
+                session_id,
+                target_agent.value,
+                tool_calls,
+            )
         else:
-            agent_resp = await self.accounts_agent.run(user_message, user)
+            # Hardcoded path: agent already has a definitive response
+            agent_resp = await agent.run(agent_input, user, history=past_history)
+            tool_calls = self._detect_tool_calls(target_agent, user_message)
+            llm_logger.info(
+                "[AGENT_THINKING] session=%s agent=%s | Tool selected: %s | Reasoning: hardcoded agent response",
+                session_id,
+                target_agent.value,
+                tool_calls,
+            )
 
-        # Step 4: Detokenize response if necessary
+        llm_logger.info(
+            "[AGENT_OUTPUT] session=%s agent=%s | Response: %s",
+            session_id,
+            target_agent.value,
+            agent_resp,
+        )
+
+        # ── Step 4: Detokenize response if necessary ──
         final_resp = self.redactor.detokenize(agent_resp, redaction.token_map)
+        llm_logger.info(
+            "[DETOKENIZE] session=%s | Final response: %s",
+            session_id,
+            final_resp,
+        )
 
-        # Step 5: Persist in conversation memory
+        # ── Step 5: Persist in conversation memory ──
         await self.memory_manager.append_message(
             session_id=session_id,
             customer_id=user.customer_id,
@@ -79,6 +197,27 @@ class ChatPipeline:
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
+        # ── Step 6: Compute cost ──
+        # Prefer real cost returned by LLMRouter; estimate word count as fallback
+        if llm_cost > 0.0:
+            cost_usd = llm_cost
+        else:
+            prompt_tokens = len(user_message.split()) * 2  # rough token estimate
+            completion_tokens = len(final_resp.split()) * 2
+            cost_usd = await self.llm_router.self_hosted.calculate_cost(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
+
+        llm_logger.info(
+            "[COST] session=%s | model=laguna-s-2.1-free prompt_tokens=%d completion_tokens=%d cost_usd=%.6f latency_ms=%.2f",
+            session_id,
+            len(user_message.split()) * 2,
+            len(final_resp.split()) * 2,
+            cost_usd,
+            latency_ms,
+        )
+
         return ChatAgentState(
             session_id=session_id,
             user=user,
@@ -89,7 +228,31 @@ class ChatPipeline:
             agent_response=agent_resp,
             final_response=final_resp,
             history=history,
-            cost_usd=0.0001,
+            cost_usd=cost_usd,
             latency_ms=latency_ms,
             error=None,
         )
+
+    @staticmethod
+    def _detect_tool_calls(agent: AgentName, query: str) -> list[str]:
+        """Detect which tools were triggered by the query for the given agent domain."""
+        tools: list[str] = []
+        lower = query.lower()
+        if agent == AgentName.ACCOUNTS:
+            if any(kw in lower for kw in ["summary", "total", "all account"]):
+                tools.append("get_account_summary")
+            if any(kw in lower for kw in ["balance", "account", "accounts", "saving", "savings", "fd", "muddati"]):
+                tools.append("get_accounts")
+        elif agent == AgentName.TRANSACTION:
+            if any(kw in lower for kw in ["spending", "summary", "breakdown"]):
+                tools.append("get_spending_summary")
+            if any(kw in lower for kw in ["transaction", "transactions", "history", "recent"]):
+                tools.append("get_transactions")
+        elif agent == AgentName.SERVICE:
+            if "block" in lower and ("card" in lower or "debit" in lower or "credit" in lower):
+                tools.append("block_card")
+            if any(kw in lower for kw in ["cheque", "check book", "checkbook"]):
+                tools.append("create_service_request")
+            if any(kw in lower for kw in ["service", "request", "ticket", "complaint"]):
+                tools.append("get_service_requests")
+        return tools
