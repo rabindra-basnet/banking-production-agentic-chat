@@ -27,7 +27,19 @@ class AccountsAgent:
         """Process an accounts domain user query using domain tools."""
         lower_msg = user_message.lower()
 
-        # 1. Summary / Total Balance Tool Call
+        # 1. Identity & Capability Questions
+        if any(w in lower_msg for w in ["who are you", "what is your name", "what can you do", "help"]):
+            return (
+                f"Namaste {user.name}! 🙏\n\n"
+                f"I am the **NepalBank AI Assistant**, your official retail banking concierge.\n\n"
+                f"Here is what I can assist you with:\n"
+                f"• 💳 **Accounts & Balances**: Check Savings Khata, Muddati Khata & statements\n"
+                f"• 💸 **Payments & Transfers**: Fonepay QR queries, ConnectIPS transfers & spending history\n"
+                f"• 📋 **Banking Services**: Request Cheque Books (25/50/100 leaves), emergency card blocking & KYC updates\n\n"
+                f"How may I help you today?"
+            )
+
+        # 2. Summary / Total Balance Tool Call
         if "summary" in lower_msg or "total" in lower_msg or "all" in lower_msg:
             try:
                 summary = await self.tools.get_account_summary(user.customer_id)

@@ -46,13 +46,13 @@ class AccountsService:
             # Fallback mock for testing or isolated environments
             accounts = [
                 BankAccount(
-                    account_number=f"XXXXXXXXXXXX{customer_id[-4:]}",
+                    account_number=f"012010005678{customer_id[-4:]}",
                     account_type="savings",
                     balance=Decimal("125430.50"),
-                    currency="INR",
+                    currency="NPR",
                     status="active",
-                    branch_name="MG Road Branch",
-                    ifsc_code="BANK0000123",
+                    branch_name="Kathmandu Main Branch",
+                    ifsc_code="NBL0000123",
                 )
             ]
 

@@ -119,7 +119,24 @@ class CoordinatorAgent:
             if re.search(rf"\b{re.escape(indicator)}\b", text):
                 return AgentName.SERVICE
 
-        # 2. Context Continuity: Check recent conversation turn if query is short / conversational follow-up
+        # 2. General Identity & Greeting Intent: Do not blindly inherit previous service actions for "who are you", "help", "hello"
+        is_identity_or_greeting = any(
+            phrase in text
+            for phrase in [
+                "who are you",
+                "what is your name",
+                "what can you do",
+                "help",
+                "hello",
+                "hi",
+                "namaste",
+                "what are you",
+            ]
+        )
+        if is_identity_or_greeting:
+            return AgentName.ACCOUNTS
+
+        # 3. Context Continuity: Check recent conversation turn if query is short / conversational follow-up
         recent_agent: AgentName | None = None
         if history:
             for past_msg in reversed(history[-4:]):
@@ -131,7 +148,7 @@ class CoordinatorAgent:
                     except ValueError:
                         pass
 
-        # 3. Calculate semantic scoring across domain categories
+        # 4. Calculate semantic scoring across domain categories
         scores: dict[AgentName, int] = {
             AgentName.SERVICE: 0,
             AgentName.TRANSACTION: 0,
@@ -143,7 +160,7 @@ class CoordinatorAgent:
                 if re.search(rf"\b{re.escape(kw)}", text):
                     scores[agent_name] += 2
 
-        # 4. If query is ambiguous / follow-up, give weight to the ongoing context memory agent
+        # 5. If query is ambiguous / follow-up, give weight to the ongoing context memory agent
         if recent_agent and scores[recent_agent] == max(scores.values()):
             scores[recent_agent] += 1
 
@@ -151,7 +168,7 @@ class CoordinatorAgent:
         if scores[best_agent] > 0:
             return best_agent
 
-        # 5. Follow-up context fallback if no direct keyword matched
+        # 6. Follow-up context fallback if no direct keyword matched
         if recent_agent:
             return recent_agent
 
