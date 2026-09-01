@@ -1,7 +1,4 @@
-"""Accounts Agent implementation handling account information workflows via Accounts Tools."""
-
-from __future__ import annotations
-
+import logging
 from typing import Any
 
 from banking_chat.core.common.types import AuthenticatedUser
@@ -9,6 +6,8 @@ from banking_chat.core.common.utils import format_currency
 from banking_chat.modules.accounts.prompts import ACCOUNTS_AGENT_SYSTEM_PROMPT
 from banking_chat.modules.accounts.service import AccountsService
 from banking_chat.modules.accounts.tools import AccountsTools
+
+logger = logging.getLogger("banking_chat.modules.accounts")
 
 
 class AccountsAgent:
@@ -25,6 +24,7 @@ class AccountsAgent:
 
     async def run(self, user_message: str, user: AuthenticatedUser, **kwargs: Any) -> str:
         """Process an accounts domain user query using domain tools."""
+        logger.info(f"Processing accounts query for customer={user.customer_id}: '{user_message}'")
         lower_msg = user_message.lower()
 
         # 1. Identity & Capability Questions

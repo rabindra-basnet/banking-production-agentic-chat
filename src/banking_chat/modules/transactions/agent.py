@@ -1,7 +1,4 @@
-"""Transactions Agent implementation handling transaction query workflows via Transactions Tools."""
-
-from __future__ import annotations
-
+import logging
 from typing import Any
 
 from banking_chat.core.common.types import AuthenticatedUser
@@ -10,6 +7,8 @@ from banking_chat.modules.transactions.prompts import TRANSACTION_AGENT_SYSTEM_P
 from banking_chat.modules.transactions.schemas import TransactionQueryRequest
 from banking_chat.modules.transactions.service import TransactionsService
 from banking_chat.modules.transactions.tools import TransactionsTools
+
+logger = logging.getLogger("banking_chat.modules.transactions")
 
 
 class TransactionsAgent:
@@ -26,6 +25,7 @@ class TransactionsAgent:
 
     async def run(self, user_message: str, user: AuthenticatedUser, **kwargs: Any) -> str:
         """Process a transactions domain user query using domain tools."""
+        logger.info(f"Processing transaction query for customer={user.customer_id}: '{user_message}'")
         lower = user_message.lower()
 
         # 1. Spending Summary Tool Call

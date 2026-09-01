@@ -1,7 +1,4 @@
-"""Customer Services Agent implementation handling service requests via Services Tools."""
-
-from __future__ import annotations
-
+import logging
 import re
 from typing import Any
 
@@ -10,6 +7,8 @@ from banking_chat.modules.services.prompts import SERVICE_AGENT_SYSTEM_PROMPT
 from banking_chat.modules.services.schemas import BlockCardRequest, CreateServiceRequestPayload
 from banking_chat.modules.services.service import CustomerServicesService
 from banking_chat.modules.services.tools import ServicesTools
+
+logger = logging.getLogger("banking_chat.modules.services")
 
 
 class ServiceAgent:
@@ -26,6 +25,7 @@ class ServiceAgent:
 
     async def run(self, user_message: str, user: AuthenticatedUser, **kwargs: Any) -> str:
         """Process a service requests domain user query using domain tools."""
+        logger.info(f"Processing service request for customer={user.customer_id}: '{user_message}'")
         lower = user_message.lower()
 
         history = kwargs.get("history") or []

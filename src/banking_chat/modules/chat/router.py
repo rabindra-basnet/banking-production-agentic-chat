@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -48,6 +49,9 @@ from banking_chat.modules.chat.schemas import (
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 
 router = APIRouter(tags=["Chat & Authentication"])
+
+auth_logger = logging.getLogger("banking_chat.modules.auth")
+chat_logger = logging.getLogger("banking_chat.modules.chat")
 
 
 @router.get(
@@ -121,6 +125,10 @@ async def login_endpoint(
         secure=False,
         max_age=7 * 86400,
         path="/api/v1/auth",
+    )
+
+    auth_logger.info(
+        f"Customer login successful: customer_id={matched_customer.customer_id} name='{matched_customer.name}' tier={matched_customer.tier}"
     )
 
     # Return access_token directly in response body for in-memory JS client storage
@@ -307,6 +315,10 @@ async def chat_endpoint(
             )
             full_response = state.get("final_response", "")
             target_agent = state.get("target_agent", "accounts_agent")
+
+            chat_logger.info(
+                f"Chat executed: session_id={session_id_str} customer_id={current_user.customer_id} agent={target_agent} latency_ms={state.get('latency_ms', 0):.2f}"
+            )
 
             if idem_key:
                 await idempotency_mgr.save_response(
