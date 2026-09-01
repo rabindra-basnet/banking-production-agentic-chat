@@ -1,4 +1,4 @@
-"""FastAPI authentication & CSRF validation middleware with double-submit cookie and origin verification."""
+"""FastAPI authentication middleware enforcing in-memory Bearer token verification and path-isolated refresh tokens."""
 
 from __future__ import annotations
 
@@ -9,58 +9,27 @@ from fastapi import Depends, Header, HTTPException, Request, Response, status
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
-from banking_chat.core.config.settings import get_settings
 from banking_chat.modules.auth.jwt_validator import JWTValidator
 
 _validator = JWTValidator()
-
-
-def verify_csrf_protection(request: Request) -> None:
-    """Validate cross-origin requests for state-changing HTTP methods (POST, PUT, DELETE, PATCH)."""
-    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
-        settings = get_settings()
-        
-        # 1. Verify Origin / Referer Header against allowed hosts
-        origin = request.headers.get("origin") or request.headers.get("referer")
-        if origin:
-            # Strip trailing slash or path for base origin matching
-            origin_base = origin.rstrip("/").split("?")[0]
-            # Match against configured whitelist
-            is_valid_origin = any(
-                origin_base.startswith(allowed.rstrip("/")) for allowed in settings.cors_allowed_origins
-            )
-            if not is_valid_origin and settings.app_env == "production":
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Cross-Origin Request Forgery (CSRF) check failed: Unauthorized Origin.",
-                )
-
-        # 2. Check for custom anti-CSRF requested-with or content-type header for API endpoints
-        sec_fetch_site = request.headers.get("sec-fetch-site")
-        if sec_fetch_site and sec_fetch_site == "cross-site":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cross-site requests are strictly blocked by anti-CSRF policies.",
-            )
 
 
 async def get_current_user(
     request: Request,
     authorization: Annotated[str | None, Header()] = None,
 ) -> AuthenticatedUser:
-    """Extract and validate the current authenticated user with CSRF and Blacklist verification."""
-    # Enforce Anti-CSRF checks on incoming state-changing requests
-    verify_csrf_protection(request)
-
+    """Extract and validate JWT access token strictly from in-memory Authorization Bearer header (or cookie fallback)."""
     token = None
 
-    # 1. First priority: Extract access_token from HttpOnly / SameSite cookie
-    if "access_token" in request.cookies:
-        token = request.cookies.get("access_token")
-    elif authorization:
+    # 1. Primary: Extract access_token from Authorization: Bearer <token> header (In-Memory JS state)
+    if authorization:
         parts = authorization.split()
         if len(parts) == 2 and parts[0].lower() == "bearer":
             token = parts[1]
+
+    # 2. Secondary fallback for SSR / cookie clients
+    if not token and "access_token" in request.cookies:
+        token = request.cookies.get("access_token")
 
     if not token:
         # Development fallback user if no auth token is provided in non-production
@@ -71,7 +40,7 @@ async def get_current_user(
     except TokenExpiredError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access token expired",
+            detail="Access token expired. Please refresh session.",
         ) from err
     except AuthenticationError as err:
         raise HTTPException(

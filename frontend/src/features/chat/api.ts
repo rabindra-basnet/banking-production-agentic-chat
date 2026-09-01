@@ -1,10 +1,10 @@
 import type { StreamEventPayload, ChatSession, ChatMessage } from '@/shared/types';
+import { authenticatedFetch } from '@/features/auth/api';
 
 export async function fetchServerSessions(): Promise<ChatSession[]> {
   try {
-    const response = await fetch('/api/v1/sessions', {
+    const response = await authenticatedFetch('/api/v1/sessions', {
       method: 'GET',
-      credentials: 'same-origin',
     });
 
     if (!response.ok) return [];
@@ -23,9 +23,8 @@ export async function fetchServerSessions(): Promise<ChatSession[]> {
 
 export async function fetchSessionHistory(sessionId: string): Promise<ChatMessage[]> {
   try {
-    const response = await fetch(`/api/v1/history/${sessionId}`, {
+    const response = await authenticatedFetch(`/api/v1/history/${sessionId}`, {
       method: 'GET',
-      credentials: 'same-origin',
     });
 
     if (!response.ok) return [];
@@ -43,9 +42,8 @@ export async function fetchSessionHistory(sessionId: string): Promise<ChatMessag
 
 export async function deleteServerSession(sessionId: string): Promise<boolean> {
   try {
-    const response = await fetch(`/api/v1/sessions/${sessionId}`, {
+    const response = await authenticatedFetch(`/api/v1/sessions/${sessionId}`, {
       method: 'DELETE',
-      credentials: 'same-origin',
     });
     return response.ok;
   } catch {
@@ -62,13 +60,12 @@ export async function sendChatMessageStream(
   const idempotencyKey = `idem_${crypto.randomUUID()}`;
 
   try {
-    const response = await fetch('/api/v1/chat', {
+    const response = await authenticatedFetch('/api/v1/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Idempotency-Key': idempotencyKey,
       },
-      credentials: 'same-origin',
       body: JSON.stringify({
         message,
         session_id: sessionId,

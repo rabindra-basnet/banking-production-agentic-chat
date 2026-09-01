@@ -1,20 +1,31 @@
-"""FastAPI Application Factory for Banking Production Agentic Chat."""
+"""FastAPI Application Factory for Banking Production Agentic Chat with Global Exception Handlers."""
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from banking_chat import __version__
+from banking_chat.core.common.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    BankingChatError,
+    TokenExpiredError,
+)
 from banking_chat.core.config.constants import API_V1_PREFIX
 from banking_chat.core.config.logging_config import setup_logging
 from banking_chat.core.config.settings import get_settings
 from banking_chat.core.db.session import close_db_engine, get_engine
 from banking_chat.modules.chat.router import router as chat_router
 from banking_chat.modules.observability.tracing import setup_tracing
+
+logger = logging.getLogger("banking_chat.app")
 
 
 @asynccontextmanager
@@ -31,7 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def create_app() -> FastAPI:
-    """Instantiate and configure the FastAPI application."""
+    """Instantiate and configure the FastAPI application with global exception handling."""
     app = FastAPI(
         title="Banking Production Agentic Chat",
         description="Production-grade AI-powered retail banking assistant with Vertical Slicing.",
@@ -50,9 +61,59 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # ─── Global Exception Handlers ───
+
+    @app.exception_handler(TokenExpiredError)
+    async def token_expired_handler(request: Request, exc: TokenExpiredError) -> JSONResponse:
+        logger.warning(f"Token expired: path={request.url.path}")
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"error": "TokenExpiredError", "message": "Access token expired. Please refresh session.", "code": "TOKEN_EXPIRED"},
+        )
+
+    @app.exception_handler(AuthenticationError)
+    async def authentication_error_handler(request: Request, exc: AuthenticationError) -> JSONResponse:
+        logger.warning(f"Authentication failure: path={request.url.path} msg={str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"error": "AuthenticationError", "message": exc.message, "code": exc.code},
+        )
+
+    @app.exception_handler(AuthorizationError)
+    async def authorization_error_handler(request: Request, exc: AuthorizationError) -> JSONResponse:
+        logger.warning(f"Authorization forbidden: path={request.url.path} msg={str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content={"error": "AuthorizationError", "message": exc.message, "code": exc.code},
+        )
+
+    @app.exception_handler(BankingChatError)
+    async def banking_chat_error_handler(request: Request, exc: BankingChatError) -> JSONResponse:
+        logger.error(f"Banking application domain error: path={request.url.path} error={exc.message}")
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": exc.__class__.__name__, "message": exc.message, "code": exc.code},
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        logger.warning(f"Request validation failure on {request.url.path}: {exc.errors()}")
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"error": "ValidationError", "message": "Invalid request payload", "details": exc.errors()},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception(f"Unhandled server exception on {request.url.path}: {str(exc)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "InternalServerError", "message": "An unexpected server error occurred. Please try again later.", "code": "INTERNAL_SERVER_ERROR"},
+        )
+
     # Mount Vertical Slice API Routers
     app.include_router(chat_router, prefix=API_V1_PREFIX)
-    app.include_router(chat_router)  # Also mount at root for /health and direct access
+    app.include_router(chat_router)  # Mount at root for /health and direct access
 
     return app
 

@@ -140,7 +140,7 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
         path="/",
     )
 
-    # Set refresh token in Secure SameSite Cookie
+    # Set refresh token in Secure SameSite Cookie (Isolated to auth refresh path)
     response.set_cookie(
         key="refresh_token",
         value=pair["refresh_token"],
@@ -151,8 +151,10 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
         path="/api/v1/auth",
     )
 
-    # Return profile info only (tokens are safely encapsulated in cookies)
+    # Return access_token directly in response body for in-memory JS client storage
     return TokenResponse(
+        access_token=pair["access_token"],
+        csrf_token=pair["access_token"][:16],
         customer_id=matched_customer.customer_id,
         name=matched_customer.name,
         email=matched_customer.email,
@@ -166,12 +168,12 @@ async def login_endpoint(payload: LoginRequest, response: Response) -> TokenResp
     "/auth/me",
     response_model=TokenResponse,
     status_code=status.HTTP_200_OK,
-    summary="Get current authenticated user session profile from cookies",
+    summary="Get current authenticated user session profile from Bearer token or cookies",
 )
 async def get_current_user_profile(
     current_user: CurrentUser,
 ) -> TokenResponse:
-    """Validate current session from HttpOnly cookies and return customer profile to survive page reload."""
+    """Validate current session from in-memory token or cookie and return customer profile."""
     user_info = CUSTOMER_DIRECTORY.get(current_user.customer_id, CUSTOMER_DIRECTORY["CIF908123"])
     return TokenResponse(
         customer_id=current_user.customer_id,
@@ -194,7 +196,7 @@ async def refresh_token_endpoint(
     response: Response,
     payload: RefreshTokenRequest | None = None,
 ) -> TokenResponse:
-    """Validate refresh token from cookies (or payload) and rotate cookie token pair."""
+    """Validate refresh token from cookies (or payload) and issue new in-memory access token."""
     refresh_token = (
         request.cookies.get("refresh_token")
         or (payload.refresh_token if payload else None)
@@ -216,15 +218,6 @@ async def refresh_token_endpoint(
     user_info = CUSTOMER_DIRECTORY.get(result.get("cif", "CIF908123"), CUSTOMER_DIRECTORY["CIF908123"])
 
     response.set_cookie(
-        key="access_token",
-        value=str(result["access_token"]),
-        httponly=True,
-        samesite="lax",
-        secure=False,
-        max_age=3600,
-        path="/",
-    )
-    response.set_cookie(
         key="refresh_token",
         value=str(result["refresh_token"]),
         httponly=True,
@@ -235,6 +228,8 @@ async def refresh_token_endpoint(
     )
 
     return TokenResponse(
+        access_token=str(result["access_token"]),
+        csrf_token=str(result["access_token"])[:16],
         customer_id=user_info.customer_id,
         name=user_info.name,
         email=user_info.email,

@@ -34,8 +34,8 @@ async def test_auth_refresh_token_flow() -> None:
         assert resp.status_code == 200
         data = resp.json()
         assert data["customer_id"] == "CIF908123"
-        assert "access_token" not in data  # Transmitted securely via HttpOnly cookie
-        assert "access_token" in resp.cookies
+        assert "access_token" in data  # Returned in response for in-memory JS client storage
+        assert "refresh_token" in resp.cookies
 
 
 @pytest.mark.asyncio

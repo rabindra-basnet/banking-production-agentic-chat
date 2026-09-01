@@ -93,8 +93,10 @@ class RefreshTokenRequest(StrictBaseModel):
 
 
 class TokenResponse(StrictBaseModel):
-    """Token response payload returned to client (access token and refresh token transported via HttpOnly cookies)."""
+    """Token response payload returned to client (access token returned in-memory, refresh token in HttpOnly cookie)."""
 
+    access_token: str = Field(default="", description="Short-lived JWT access token stored in JS client memory")
+    csrf_token: str = Field(default="", description="Anti-CSRF token")
     customer_id: str = Field(default="CIF908123", description="Authenticated Customer ID")
     name: str = Field(default="Customer", description="Full Name")
     email: str = Field(default="", description="Email address")

@@ -27,5 +27,5 @@ async def test_auth_refresh_endpoint_cookie() -> None:
         data = resp.json()
         assert data["customer_id"] == "CIF908123"
         assert data["name"] == "Rabindra Basnet"
-        assert "access_token" not in data
-        assert "access_token" in resp.cookies
+        assert "access_token" in data
+        assert "refresh_token" in resp.cookies
