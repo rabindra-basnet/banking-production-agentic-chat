@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, Header, HTTPException, Request, Response, status
+from fastapi import Depends, Header, HTTPException, Request, status
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier

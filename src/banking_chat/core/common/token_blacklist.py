@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, Index, String, select
@@ -30,9 +29,7 @@ class RevokedToken(Base):
     revoked_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
-    __table_args__ = (
-        Index("idx_revoked_token_hash_exp", "token_hash", "expires_at"),
-    )
+    __table_args__ = (Index("idx_revoked_token_hash_exp", "token_hash", "expires_at"),)
 
 
 class TokenBlacklistManager:
@@ -48,7 +45,7 @@ class TokenBlacklistManager:
     async def blacklist_token(
         self,
         token: str,
-        token_type: str = "refresh",
+        token_type: str = "refresh",  # noqa: S107
         customer_id: str | None = None,
         expiry_seconds: int = 7 * 86400,
     ) -> None:

@@ -74,14 +74,18 @@ from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from uuid import UUID
 
+
 class CustomerTier(StrEnum):
     """Customer authorization tier — determines accessible features."""
-    STANDARD = "standard"       # Basic banking: balance, statements, cheque book
-    PREMIUM = "premium"         # + Fund transfers, card management
-    PRIVILEGED = "privileged"   # + Credit limit increase, loan applications
+
+    STANDARD = "standard"  # Basic banking: balance, statements, cheque book
+    PREMIUM = "premium"  # + Fund transfers, card management
+    PRIVILEGED = "privileged"  # + Credit limit increase, loan applications
+
 
 class AuthenticatedUser(BaseModel):
     """Validated user identity from the bank's identity provider (IdP)."""
+
     model_config = ConfigDict(strict=True, frozen=True)
 
     user_id: UUID = Field(description="Unique customer identifier from bank's IdP")
@@ -99,8 +103,10 @@ class AuthenticatedUser(BaseModel):
 ```python
 # packages/common_schemas/src/common_schemas/banking_entities.py
 
+
 class BankAccount(BaseModel):
     """Bank account details returned by Accounts MCP Server."""
+
     model_config = ConfigDict(strict=True)
 
     account_number: str = Field(description="Masked account number (last 4 digits visible)")
@@ -111,8 +117,10 @@ class BankAccount(BaseModel):
     branch_name: str
     ifsc_code: str
 
+
 class Transaction(BaseModel):
     """Individual transaction record."""
+
     model_config = ConfigDict(strict=True)
 
     transaction_id: str = Field(description="Unique transaction reference")
@@ -124,14 +132,15 @@ class Transaction(BaseModel):
     channel: Literal["ATM", "UPI", "NEFT", "RTGS", "IMPS", "POS", "ONLINE", "BRANCH"]
     counterparty: str | None = Field(default=None, description="Payee/Payer name if available")
 
+
 class ServiceRequest(BaseModel):
     """Customer service request status."""
+
     model_config = ConfigDict(strict=True)
 
     request_id: str
     type: Literal[
-        "cheque_book", "address_change", "kyc_update",
-        "card_block", "credit_limit_increase", "statement_request"
+        "cheque_book", "address_change", "kyc_update", "card_block", "credit_limit_increase", "statement_request"
     ]
     status: Literal["submitted", "processing", "completed", "rejected"]
     submitted_at: datetime
@@ -144,21 +153,27 @@ class ServiceRequest(BaseModel):
 ```python
 # src/banking_chat/api/schemas/chat.py
 
+
 class ChatMessage(BaseModel):
     """A single message in the conversation."""
+
     role: Literal["user", "assistant", "system"]
     content: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     metadata: dict[str, Any] | None = None
 
+
 class ChatRequest(BaseModel):
     """Incoming chat request from the UI."""
+
     message: str = Field(min_length=1, max_length=2000, description="User's message")
     session_id: UUID = Field(description="Chat session identifier")
     stream: bool = Field(default=True, description="Whether to stream the response via SSE")
 
+
 class ChatResponse(BaseModel):
     """Chat response (non-streaming)."""
+
     session_id: UUID
     message: str
     agent_used: str = Field(description="Which agent handled this query")
@@ -166,8 +181,10 @@ class ChatResponse(BaseModel):
     latency_ms: int
     cost_usd: float = Field(description="Estimated cost of this interaction")
 
+
 class StreamChunk(BaseModel):
     """SSE streaming chunk."""
+
     event: Literal["token", "tool_call", "agent_switch", "done", "error"]
     data: str
     metadata: dict[str, Any] | None = None
@@ -182,11 +199,13 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
+
 class BankingAgentState(TypedDict):
     """
     Central state schema for the LangGraph banking agent system.
     Flows through all nodes and edges in the graph.
     """
+
     # Conversation messages (append-only with LangGraph reducer)
     messages: Annotated[list[BaseMessage], add_messages]
 
@@ -194,20 +213,20 @@ class BankingAgentState(TypedDict):
     user: AuthenticatedUser
 
     # Routing decisions
-    intent: str | None                      # Classified intent (balance, transaction, service, general)
-    target_agent: str | None                # Which sub-agent to route to
-    requires_authorization: bool            # Whether this action needs privilege check
-    authorization_granted: bool             # Result of authorization check
+    intent: str | None  # Classified intent (balance, transaction, service, general)
+    target_agent: str | None  # Which sub-agent to route to
+    requires_authorization: bool  # Whether this action needs privilege check
+    authorization_granted: bool  # Result of authorization check
 
     # Inter-agent shared state
-    shared_data: dict[str, Any]             # Data passed between agents (e.g., account details)
+    shared_data: dict[str, Any]  # Data passed between agents (e.g., account details)
 
     # PII tracking
-    pii_tokens: dict[str, str]              # Mapping of PII tokens to original values
-    pii_redacted_input: str | None          # User input after PII redaction
+    pii_tokens: dict[str, str]  # Mapping of PII tokens to original values
+    pii_redacted_input: str | None  # User input after PII redaction
 
     # Observability
-    agent_trace: list[dict[str, Any]]       # Trace of agent decisions and tool calls
+    agent_trace: list[dict[str, Any]]  # Trace of agent decisions and tool calls
     total_tokens_used: int
     estimated_cost_usd: float
 ```
@@ -397,11 +416,9 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("banking-accounts-mcp")
 
+
 @mcp.tool()
-async def get_account_balance(
-    account_number: str,
-    customer_id: str
-) -> dict:
+async def get_account_balance(account_number: str, customer_id: str) -> dict:
     """
     Get the current available balance for a specific bank account.
 
@@ -416,6 +433,7 @@ async def get_account_balance(
         ToolError: If account doesn't belong to the customer or account is inactive.
     """
 
+
 @mcp.tool()
 async def list_customer_accounts(customer_id: str) -> list[dict]:
     """
@@ -428,12 +446,13 @@ async def list_customer_accounts(customer_id: str) -> list[dict]:
         List of accounts with account number (masked), type, status, and balance.
     """
 
+
 @mcp.tool()
 async def get_account_statement(
     account_number: str,
     customer_id: str,
-    from_date: str,     # ISO format: YYYY-MM-DD
-    to_date: str        # ISO format: YYYY-MM-DD
+    from_date: str,  # ISO format: YYYY-MM-DD
+    to_date: str,  # ISO format: YYYY-MM-DD
 ) -> dict:
     """
     Generate account statement for a date range.
@@ -454,13 +473,15 @@ async def get_account_statement(
 ```python
 # src/banking_chat/mcp_servers/transactions/server.py
 
+
 @mcp.tool()
 async def get_recent_transactions(
     account_number: str,
     customer_id: str,
-    count: int = 10     # Default last 10 transactions
+    count: int = 10,  # Default last 10 transactions
 ) -> list[dict]:
     """Get the most recent N transactions for an account."""
+
 
 @mcp.tool()
 async def search_transactions(
@@ -470,15 +491,13 @@ async def search_transactions(
     from_date: str | None = None,
     to_date: str | None = None,
     description_contains: str | None = None,
-    transaction_type: str | None = None  # "credit" or "debit"
+    transaction_type: str | None = None,  # "credit" or "debit"
 ) -> list[dict]:
     """Search transactions by various filters. At least one filter is required."""
 
+
 @mcp.tool()
-async def get_transaction_details(
-    transaction_id: str,
-    customer_id: str
-) -> dict:
+async def get_transaction_details(transaction_id: str, customer_id: str) -> dict:
     """Get full details of a specific transaction by its reference ID."""
 ```
 
@@ -487,34 +506,38 @@ async def get_transaction_details(
 ```python
 # src/banking_chat/mcp_servers/services/server.py
 
+
 @mcp.tool()
 async def request_cheque_book(
     account_number: str,
     customer_id: str,
-    leaves: int = 25    # 25, 50, or 100
+    leaves: int = 25,  # 25, 50, or 100
 ) -> dict:
     """Submit a cheque book request. Returns service request ID and estimated delivery."""
+
 
 @mcp.tool()
 async def submit_address_change(
     customer_id: str,
-    new_address: dict    # {line1, line2, city, state, pincode}
+    new_address: dict,  # {line1, line2, city, state, pincode}
 ) -> dict:
     """Submit address change request. Requires branch verification within 7 days."""
+
 
 @mcp.tool()
 async def submit_kyc_update(
     customer_id: str,
     document_type: str,  # "aadhaar", "pan", "passport", "voter_id"
-    document_number: str  # Will be PII-redacted before storage
+    document_number: str,  # Will be PII-redacted before storage
 ) -> dict:
     """Initiate KYC document update. Customer must visit branch with original documents."""
+
 
 @mcp.tool()
 async def block_card(
     card_last_four: str,
     customer_id: str,
-    reason: str          # "lost", "stolen", "suspicious_activity", "damaged"
+    reason: str,  # "lost", "stolen", "suspicious_activity", "damaged"
 ) -> dict:
     """
     EMERGENCY: Immediately block a debit/credit card.
@@ -522,23 +545,19 @@ async def block_card(
     Requires PREMIUM or PRIVILEGED tier.
     """
 
+
 @mcp.tool()
 async def request_credit_limit_increase(
-    card_last_four: str,
-    customer_id: str,
-    requested_limit: float,
-    reason: str
+    card_last_four: str, customer_id: str, requested_limit: float, reason: str
 ) -> dict:
     """
     Submit credit limit increase request.
     Requires PRIVILEGED tier. Subject to bank's approval process (3-5 business days).
     """
 
+
 @mcp.tool()
-async def check_service_request_status(
-    request_id: str,
-    customer_id: str
-) -> dict:
+async def check_service_request_status(request_id: str, customer_id: str) -> dict:
     """Check the current status of an existing service request."""
 ```
 
@@ -624,21 +643,19 @@ sequenceDiagram
 
 AUTHORIZATION_POLICIES: dict[str, list[CustomerTier]] = {
     # Account operations
-    "get_account_balance":         [STANDARD, PREMIUM, PRIVILEGED],
-    "list_customer_accounts":      [STANDARD, PREMIUM, PRIVILEGED],
-    "get_account_statement":       [STANDARD, PREMIUM, PRIVILEGED],
-
+    "get_account_balance": [STANDARD, PREMIUM, PRIVILEGED],
+    "list_customer_accounts": [STANDARD, PREMIUM, PRIVILEGED],
+    "get_account_statement": [STANDARD, PREMIUM, PRIVILEGED],
     # Transaction operations
-    "get_recent_transactions":     [STANDARD, PREMIUM, PRIVILEGED],
-    "search_transactions":         [STANDARD, PREMIUM, PRIVILEGED],
-    "get_transaction_details":     [STANDARD, PREMIUM, PRIVILEGED],
-
+    "get_recent_transactions": [STANDARD, PREMIUM, PRIVILEGED],
+    "search_transactions": [STANDARD, PREMIUM, PRIVILEGED],
+    "get_transaction_details": [STANDARD, PREMIUM, PRIVILEGED],
     # Service operations
-    "request_cheque_book":         [STANDARD, PREMIUM, PRIVILEGED],
-    "submit_address_change":       [STANDARD, PREMIUM, PRIVILEGED],
-    "submit_kyc_update":           [STANDARD, PREMIUM, PRIVILEGED],
-    "block_card":                  [PREMIUM, PRIVILEGED],          # Not for Standard
-    "request_credit_limit_increase": [PRIVILEGED],                 # Privileged only
+    "request_cheque_book": [STANDARD, PREMIUM, PRIVILEGED],
+    "submit_address_change": [STANDARD, PREMIUM, PRIVILEGED],
+    "submit_kyc_update": [STANDARD, PREMIUM, PRIVILEGED],
+    "block_card": [PREMIUM, PRIVILEGED],  # Not for Standard
+    "request_credit_limit_increase": [PRIVILEGED],  # Privileged only
 }
 ```
 
@@ -649,15 +666,15 @@ AUTHORIZATION_POLICIES: dict[str, list[CustomerTier]] = {
 
 PII_PATTERNS: dict[str, str] = {
     # Indian banking PII patterns
-    "AADHAAR":          r"\b\d{4}\s?\d{4}\s?\d{4}\b",
-    "PAN":              r"\b[A-Z]{5}\d{4}[A-Z]\b",
-    "CREDIT_CARD":      r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
-    "ACCOUNT_NUMBER":   r"\b\d{9,18}\b",           # 9-18 digit account numbers
-    "IFSC":             r"\b[A-Z]{4}0[A-Z0-9]{6}\b",
-    "PHONE_IN":         r"\b(?:\+91|91|0)?[6-9]\d{9}\b",
-    "EMAIL":            r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b",
-    "UPI_ID":           r"\b[\w.-]+@[a-z]+\b",     # e.g., user@upi
-    "PINCODE":          r"\b[1-9]\d{5}\b",
+    "AADHAAR": r"\b\d{4}\s?\d{4}\s?\d{4}\b",
+    "PAN": r"\b[A-Z]{5}\d{4}[A-Z]\b",
+    "CREDIT_CARD": r"\b(?:\d{4}[-\s]?){3}\d{4}\b",
+    "ACCOUNT_NUMBER": r"\b\d{9,18}\b",  # 9-18 digit account numbers
+    "IFSC": r"\b[A-Z]{4}0[A-Z0-9]{6}\b",
+    "PHONE_IN": r"\b(?:\+91|91|0)?[6-9]\d{9}\b",
+    "EMAIL": r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b",
+    "UPI_ID": r"\b[\w.-]+@[a-z]+\b",  # e.g., user@upi
+    "PINCODE": r"\b[1-9]\d{5}\b",
 }
 
 # Redaction pipeline flow:
@@ -719,6 +736,7 @@ edge_security:
 ```python
 # src/banking_chat/llm/router.py
 
+
 class LLMRoutingDecision:
     """
     Routes queries to the appropriate LLM based on data sensitivity and complexity.
@@ -750,9 +768,9 @@ class LLMRoutingDecision:
 
 LLM_COST_RATES: dict[str, dict] = {
     "self_hosted": {
-        "input_per_1k_tokens": 0.0,      # No per-token cost (fixed infra)
+        "input_per_1k_tokens": 0.0,  # No per-token cost (fixed infra)
         "output_per_1k_tokens": 0.0,
-        "fixed_cost_per_hour": 2.50       # Infrastructure cost amortized
+        "fixed_cost_per_hour": 2.50,  # Infrastructure cost amortized
     },
     "gpt-4o": {
         "input_per_1k_tokens": 0.005,
@@ -761,14 +779,14 @@ LLM_COST_RATES: dict[str, dict] = {
     "claude-3.5-sonnet": {
         "input_per_1k_tokens": 0.003,
         "output_per_1k_tokens": 0.015,
-    }
+    },
 }
 
 COST_THRESHOLDS = {
-    "per_interaction_warning": 0.10,      # Alert if single interaction > $0.10
-    "per_interaction_hard_limit": 0.50,   # Reject if estimated > $0.50
-    "daily_budget": 500.00,               # Daily budget cap
-    "monthly_budget": 10000.00,           # Monthly budget cap
+    "per_interaction_warning": 0.10,  # Alert if single interaction > $0.10
+    "per_interaction_hard_limit": 0.50,  # Reject if estimated > $0.50
+    "daily_budget": 500.00,  # Daily budget cap
+    "monthly_budget": 10000.00,  # Monthly budget cap
 }
 ```
 
@@ -779,18 +797,21 @@ COST_THRESHOLDS = {
 ```python
 # src/banking_chat/session/store.py
 
+
 class SessionData(BaseModel):
     """Complete session state stored in Redis + PostgreSQL."""
+
     session_id: UUID
     user_id: UUID
     created_at: datetime
     last_active: datetime
-    conversation_history: list[ChatMessage]     # Full message history
-    shared_agent_state: dict[str, Any]          # Inter-agent shared data
-    pii_token_map: dict[str, str]               # Active PII token mappings
+    conversation_history: list[ChatMessage]  # Full message history
+    shared_agent_state: dict[str, Any]  # Inter-agent shared data
+    pii_token_map: dict[str, str]  # Active PII token mappings
     total_tokens_used: int
     total_cost_usd: float
-    metadata: dict[str, Any]                    # Routing decisions, agent traces
+    metadata: dict[str, Any]  # Routing decisions, agent traces
+
 
 # Session lifecycle:
 # - Created on first user message
@@ -837,23 +858,21 @@ class SessionData(BaseModel):
 
 METRICS = {
     # Counters
-    "chat_requests_total":              "Total chat requests by status (success/error)",
-    "agent_invocations_total":          "Agent calls by agent_name and outcome",
-    "mcp_tool_calls_total":             "MCP tool calls by tool_name and status",
-    "pii_detections_total":             "PII detected by type (aadhaar, pan, card, etc.)",
-    "auth_failures_total":              "Authentication/authorization failures by reason",
-    "rate_limit_hits_total":            "Rate limit violations by tier",
-    "prompt_injection_attempts_total":  "Detected prompt injection attempts",
-
+    "chat_requests_total": "Total chat requests by status (success/error)",
+    "agent_invocations_total": "Agent calls by agent_name and outcome",
+    "mcp_tool_calls_total": "MCP tool calls by tool_name and status",
+    "pii_detections_total": "PII detected by type (aadhaar, pan, card, etc.)",
+    "auth_failures_total": "Authentication/authorization failures by reason",
+    "rate_limit_hits_total": "Rate limit violations by tier",
+    "prompt_injection_attempts_total": "Detected prompt injection attempts",
     # Histograms
-    "chat_response_latency_seconds":    "End-to-end response time",
-    "llm_inference_latency_seconds":    "LLM call latency by provider",
-    "mcp_tool_latency_seconds":         "MCP tool call latency",
-
+    "chat_response_latency_seconds": "End-to-end response time",
+    "llm_inference_latency_seconds": "LLM call latency by provider",
+    "mcp_tool_latency_seconds": "MCP tool call latency",
     # Gauges
-    "active_sessions":                  "Currently active chat sessions",
-    "daily_cost_usd":                   "Running daily LLM cost",
-    "monthly_cost_usd":                 "Running monthly LLM cost",
+    "active_sessions": "Currently active chat sessions",
+    "daily_cost_usd": "Running daily LLM cost",
+    "monthly_cost_usd": "Running monthly LLM cost",
 }
 ```
 

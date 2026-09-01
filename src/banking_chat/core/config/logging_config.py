@@ -136,7 +136,17 @@ def setup_logging(
             target_logger.addHandler(module_file_handler)
 
     # Suppress raw uvicorn.access, noisy SQL queries, and low-level transport engine logs
-    for logger_name in ("uvicorn.access", "sqlalchemy.engine", "sqlalchemy.pool", "sqlalchemy.dialects", "httpx", "httpcore", "urllib3", "asyncio", "aiosqlite"):
+    for logger_name in (
+        "uvicorn.access",
+        "sqlalchemy.engine",
+        "sqlalchemy.pool",
+        "sqlalchemy.dialects",
+        "httpx",
+        "httpcore",
+        "urllib3",
+        "asyncio",
+        "aiosqlite",
+    ):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     # Disable uvicorn raw access logger to prevent log pollution and duplicate logs

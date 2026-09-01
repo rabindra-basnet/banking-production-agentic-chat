@@ -1,7 +1,8 @@
 """Unit tests for Cookie-based Authentication."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from banking_chat.main import app
 
 
@@ -14,7 +15,7 @@ async def test_login_sets_httponly_cookies_and_clean_body() -> None:
         )
         assert resp.status_code == 200
         data = resp.json()
-        
+
         # Access token is returned for JS in-memory storage, refresh token in HttpOnly cookie
         assert "access_token" in data
         assert data["customer_id"] == "CIF908123"

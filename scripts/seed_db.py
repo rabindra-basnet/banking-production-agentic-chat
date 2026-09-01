@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from uuid import uuid4
@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from banking_chat.core.config.settings import get_settings
 from banking_chat.core.db.base import Base
 from banking_chat.modules.accounts.models import BankAccountModel
-from banking_chat.modules.auth.models import Role, UserModel
+from banking_chat.modules.auth.models import UserModel
 from banking_chat.modules.services.models import ServiceRequestModel
 from banking_chat.modules.transactions.models import TransactionModel
 
@@ -90,9 +90,7 @@ async def seed_database(seed_file_path: str | Path | None = None) -> None:
             cust_id = cust["customer_id"]
 
             for acc in cust.get("accounts", []):
-                stmt = select(BankAccountModel).where(
-                    BankAccountModel.account_number == acc["account_number"]
-                )
+                stmt = select(BankAccountModel).where(BankAccountModel.account_number == acc["account_number"])
                 existing = (await session.execute(stmt)).scalars().first()
                 if not existing:
                     account_model = BankAccountModel(
@@ -109,9 +107,7 @@ async def seed_database(seed_file_path: str | Path | None = None) -> None:
                     session.add(account_model)
 
             for txn in cust.get("transactions", []):
-                stmt = select(TransactionModel).where(
-                    TransactionModel.transaction_id == txn["transaction_id"]
-                )
+                stmt = select(TransactionModel).where(TransactionModel.transaction_id == txn["transaction_id"])
                 existing = (await session.execute(stmt)).scalars().first()
                 if not existing:
                     txn_dt = datetime.fromisoformat(txn["date"].replace("Z", "+00:00"))
@@ -131,9 +127,7 @@ async def seed_database(seed_file_path: str | Path | None = None) -> None:
                     session.add(txn_model)
 
             for srv in cust.get("service_requests", []):
-                stmt = select(ServiceRequestModel).where(
-                    ServiceRequestModel.request_id == srv["request_id"]
-                )
+                stmt = select(ServiceRequestModel).where(ServiceRequestModel.request_id == srv["request_id"])
                 existing = (await session.execute(stmt)).scalars().first()
                 if not existing:
                     sub_dt = datetime.fromisoformat(srv["submitted_at"].replace("Z", "+00:00"))
@@ -155,7 +149,7 @@ async def seed_database(seed_file_path: str | Path | None = None) -> None:
                     session.add(srv_model)
 
         await session.commit()
-        print("✅ Database successfully seeded with registered users and banking records")
+        print("✅ Database successfully seeded with registered users and banking records")  # noqa: T201
 
     await engine.dispose()
 

@@ -1,7 +1,8 @@
 """Unit tests for Idempotent API calls."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from banking_chat.main import app
 from banking_chat.modules.auth.jwt_validator import JWTValidator
 
@@ -13,7 +14,7 @@ async def test_chat_idempotency_same_key() -> None:
         "Authorization": f"Bearer {token}",
         "Idempotency-Key": "test-idem-key-12345",
     }
-    
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # First call
         resp1 = await client.post(

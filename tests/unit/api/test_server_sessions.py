@@ -1,13 +1,14 @@
 """Unit tests for Server-Side Database Chat Session Management."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
+from banking_chat.core.common.types import CustomerTier
+from banking_chat.core.db.base import Base
+from banking_chat.core.db.session import get_engine
 from banking_chat.main import app
 from banking_chat.modules.auth.jwt_validator import JWTValidator
-from banking_chat.core.common.types import CustomerTier
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
-from banking_chat.core.db.session import get_engine
-from banking_chat.core.db.base import Base
 
 
 @pytest.mark.asyncio

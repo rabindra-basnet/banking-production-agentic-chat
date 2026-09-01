@@ -7,7 +7,7 @@ import json
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Annotated
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
@@ -44,7 +44,6 @@ from banking_chat.modules.chat.schemas import (
     ChatSessionListResponse,
     ConversationHistoryResponse,
     HealthResponse,
-    StreamChunk,
 )
 from banking_chat.modules.session_memory.conversation import ConversationMemoryManager
 
@@ -69,6 +68,7 @@ async def get_app_config() -> AppConfigResponse:
         supported_services=settings.supported_services,
     )
 
+
 # Fallback user profile if database entry is not yet populated
 FALLBACK_USER = UserProfileSchema(
     customer_id="CIF908123",
@@ -77,7 +77,7 @@ FALLBACK_USER = UserProfileSchema(
     role=Role.CUSTOMER,
     tier=CustomerTier.STANDARD,
     accounts=["0120100056781234 (Savings Khata)", "0120100056785678 (Muddati Khata)"],
-    password="password123",
+    password="password123",  # noqa: S106
 )
 
 
@@ -170,10 +170,7 @@ async def refresh_token_endpoint(
     validator: JWTValidator = Depends(get_jwt_validator),
 ) -> RefreshResponse:
     """Validate refresh token from cookies (or payload) and issue new in-memory access token strictly without PII."""
-    refresh_token = (
-        request.cookies.get("refresh_token")
-        or (payload.refresh_token if payload else None)
-    )
+    refresh_token = request.cookies.get("refresh_token") or (payload.refresh_token if payload else None)
 
     if not refresh_token:
         raise HTTPException(
@@ -201,7 +198,7 @@ async def refresh_token_endpoint(
 
     return RefreshResponse(
         access_token=str(result["access_token"]),
-        token_type="Bearer",
+        token_type="Bearer",  # noqa: S106
         expires_in=int(result.get("expires_in", 900)),
     )
 
@@ -250,7 +247,6 @@ async def demo_token_endpoint(
     tier: str = "standard",
 ) -> TokenResponse:
     """Generate mock demo credentials for testing."""
-    tier_enum = CustomerTier(tier) if tier in CustomerTier.__members__.values() else CustomerTier.STANDARD
     user_info = await UserRepository.get_by_customer_id(customer_id) or FALLBACK_USER
 
     return TokenResponse(
@@ -286,9 +282,11 @@ async def chat_endpoint(
         cached_resp = await idempotency_mgr.get_response(idem_key, current_user.customer_id)
         if cached_resp:
             if request.stream:
+
                 async def cached_stream() -> AsyncGenerator[str, None]:
                     yield f"data: {json.dumps({'event': 'token', 'session_id': session_id_str, 'delta': cached_resp['message'], 'is_final': False})}\n\n"
                     yield f"data: {json.dumps({'event': 'done', 'session_id': session_id_str, 'delta': '', 'is_final': True, 'metadata': {'routed_agent': cached_resp['routed_agent'], 'cost_usd': cached_resp.get('cost_usd', 0.0), 'latency_ms': 0.0}})}\n\n"
+
                 return StreamingResponse(cached_stream(), media_type="text/event-stream")
             return ChatResponse(
                 session_id=session_uuid,
@@ -300,6 +298,7 @@ async def chat_endpoint(
             )
 
     if request.stream:
+
         async def event_generator() -> AsyncGenerator[str, None]:
             state = await pipeline.execute(
                 session_id=session_id_str,
@@ -321,13 +320,15 @@ async def chat_endpoint(
                 )
 
             # Send start / routing event
-            start_payload = json.dumps({
-                "event": "agent_switch",
-                "session_id": session_id_str,
-                "agent": target_agent,
-                "delta": f"Routed to {target_agent}...",
-                "is_final": False,
-            })
+            start_payload = json.dumps(
+                {
+                    "event": "agent_switch",
+                    "session_id": session_id_str,
+                    "agent": target_agent,
+                    "delta": f"Routed to {target_agent}...",
+                    "is_final": False,
+                }
+            )
             yield f"data: {start_payload}\n\n"
             await asyncio.sleep(0.05)
 
@@ -335,27 +336,31 @@ async def chat_endpoint(
             words = full_response.split(" ")
             for i, word in enumerate(words):
                 chunk = word + (" " if i < len(words) - 1 else "")
-                payload = json.dumps({
-                    "event": "token",
-                    "session_id": session_id_str,
-                    "delta": chunk,
-                    "is_final": False,
-                })
+                payload = json.dumps(
+                    {
+                        "event": "token",
+                        "session_id": session_id_str,
+                        "delta": chunk,
+                        "is_final": False,
+                    }
+                )
                 yield f"data: {payload}\n\n"
                 await asyncio.sleep(0.03)
 
             # Final completion event
-            done_payload = json.dumps({
-                "event": "done",
-                "session_id": session_id_str,
-                "delta": "",
-                "is_final": True,
-                "metadata": {
-                    "routed_agent": target_agent,
-                    "cost_usd": state.get("cost_usd", 0.0),
-                    "latency_ms": state.get("latency_ms", 0.0),
+            done_payload = json.dumps(
+                {
+                    "event": "done",
+                    "session_id": session_id_str,
+                    "delta": "",
+                    "is_final": True,
+                    "metadata": {
+                        "routed_agent": target_agent,
+                        "cost_usd": state.get("cost_usd", 0.0),
+                        "latency_ms": state.get("latency_ms", 0.0),
+                    },
                 }
-            })
+            )
             yield f"data: {done_payload}\n\n"
 
         return StreamingResponse(

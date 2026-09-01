@@ -27,11 +27,11 @@ def test_json_formatter_normalization() -> None:
     now = datetime.now(UTC)
 
     # Attach complex non-primitive context objects
-    setattr(record, "request_id", req_id)
-    setattr(record, "session_id", sess_id)
-    setattr(record, "customer_id", "CIF999888")
-    setattr(record, "agent", "coordinator_agent")
-    setattr(record, "created_at", now)
+    record.request_id = req_id
+    record.session_id = sess_id
+    record.customer_id = "CIF999888"
+    record.agent = "coordinator_agent"
+    record.created_at = now
 
     formatted = formatter.format(record)
     parsed = json.loads(formatted)

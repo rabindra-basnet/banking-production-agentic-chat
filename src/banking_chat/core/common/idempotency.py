@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from banking_chat.modules.session_memory.redis_store import RedisSessionStore

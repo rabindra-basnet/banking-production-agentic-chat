@@ -6,7 +6,6 @@ import logging
 import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any, cast
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -79,9 +78,7 @@ def create_app() -> FastAPI:
         response: Response = await call_next(request)
         duration_ms = (time.perf_counter() - start_time) * 1000
 
-        access_logger.info(
-            f"{client_ip} - \"{method} {path}\" {response.status_code} ({duration_ms:.2f}ms)"
-        )
+        access_logger.info(f'{client_ip} - "{method} {path}" {response.status_code} ({duration_ms:.2f}ms)')
         return response
 
     # ─── Global Exception Handlers ───
@@ -91,12 +88,16 @@ def create_app() -> FastAPI:
         logger.warning(f"Token expired: path={request.url.path}")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"error": "TokenExpiredError", "message": "Access token expired. Please refresh session.", "code": "TOKEN_EXPIRED"},
+            content={
+                "error": "TokenExpiredError",
+                "message": "Access token expired. Please refresh session.",
+                "code": "TOKEN_EXPIRED",
+            },
         )
 
     @app.exception_handler(AuthenticationError)
     async def authentication_error_handler(request: Request, exc: AuthenticationError) -> JSONResponse:
-        logger.warning(f"Authentication failure: path={request.url.path} msg={str(exc)}")
+        logger.warning(f"Authentication failure: path={request.url.path} msg={exc!s}")
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"error": "AuthenticationError", "message": exc.message, "code": exc.code},
@@ -104,7 +105,7 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(AuthorizationError)
     async def authorization_error_handler(request: Request, exc: AuthorizationError) -> JSONResponse:
-        logger.warning(f"Authorization forbidden: path={request.url.path} msg={str(exc)}")
+        logger.warning(f"Authorization forbidden: path={request.url.path} msg={exc!s}")
         return JSONResponse(
             status_code=status.HTTP_403_FORBIDDEN,
             content={"error": "AuthorizationError", "message": exc.message, "code": exc.code},
@@ -161,9 +162,13 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception(f"Unhandled server exception on {request.url.path}: {str(exc)}")
+        logger.exception(f"Unhandled server exception on {request.url.path}: {exc!s}")
         # In development, attach debug error info; in production, keep sanitized
-        error_detail = str(exc) if settings.app_env == "development" else "An unexpected server error occurred. Please try again later."
+        error_detail = (
+            str(exc)
+            if settings.app_env == "development"
+            else "An unexpected server error occurred. Please try again later."
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "InternalServerError", "message": error_detail, "code": "INTERNAL_SERVER_ERROR"},

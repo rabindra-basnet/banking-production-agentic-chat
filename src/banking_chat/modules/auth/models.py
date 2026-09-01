@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, TypedDict
+from typing import TypedDict
 from uuid import UUID, uuid4
 
 from pydantic import Field
-from sqlalchemy import DateTime, Index, JSON, String, select
+from sqlalchemy import DateTime, Index, String, select
 from sqlalchemy.orm import Mapped, mapped_column
 
 from banking_chat.core.common.types import CustomerTier, StrictBaseModel, StrictFrozenBaseModel
@@ -47,6 +47,7 @@ class Permission(StrEnum):
 
 # ─── SQLAlchemy Database ORM Entity for Users ───
 
+
 class UserModel(Base):
     """SQLAlchemy model representing authenticated customers and administrators in the database."""
 
@@ -65,9 +66,7 @@ class UserModel(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
 
-    __table_args__ = (
-        Index("idx_users_email_role", "email", "role"),
-    )
+    __table_args__ = (Index("idx_users_email_role", "email", "role"),)
 
 
 class UserProfileSchema(StrictBaseModel):
@@ -169,7 +168,9 @@ class TokenPayload(StrictFrozenBaseModel):
 class LoginRequest(StrictBaseModel):
     """Real system SSO / Banking Login payload."""
 
-    username: str = Field(description="Customer Identifier, Email, or Mobile number (e.g. CIF908123 or rabindra.basnet@example.com.np)")
+    username: str = Field(
+        description="Customer Identifier, Email, or Mobile number (e.g. CIF908123 or rabindra.basnet@example.com.np)"
+    )
     password: str = Field(description="Password or Auth Credential")
 
 

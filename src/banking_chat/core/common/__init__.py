@@ -39,8 +39,8 @@ from banking_chat.core.common.validators import (
 )
 
 __all__ = [
-    "AgentName",
     "AgentError",
+    "AgentName",
     "AgentRoutingError",
     "AuthenticatedUser",
     "AuthenticationError",

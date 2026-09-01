@@ -86,7 +86,21 @@ class Transaction(StrictBaseModel):
     amount: Decimal = Field(description="Transaction amount")
     type: Literal["credit", "debit"] = Field(description="Transaction type")
     balance_after: Decimal = Field(description="Balance after transaction")
-    channel: Literal["ATM", "FONEPAY", "CONNECTIPS", "NPI", "ESPEWA", "KHALTI", "POS", "ONLINE", "BRANCH", "UPI", "NEFT", "RTGS", "IMPS"]
+    channel: Literal[
+        "ATM",
+        "FONEPAY",
+        "CONNECTIPS",
+        "NPI",
+        "ESPEWA",
+        "KHALTI",
+        "POS",
+        "ONLINE",
+        "BRANCH",
+        "UPI",
+        "NEFT",
+        "RTGS",
+        "IMPS",
+    ]
     counterparty: str | None = Field(default=None, description="Payee/Payer name if available")
 
 

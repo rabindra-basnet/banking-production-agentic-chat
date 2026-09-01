@@ -76,7 +76,9 @@ class ServiceAgent:
 
         lines = ["Here are your active service requests:"]
         for r in req_list.requests:
-            sub_date = r.submitted_at.strftime("%d %b %Y") if hasattr(r.submitted_at, "strftime") else str(r.submitted_at)
+            sub_date = (
+                r.submitted_at.strftime("%d %b %Y") if hasattr(r.submitted_at, "strftime") else str(r.submitted_at)
+            )
             lines.append(
                 f"- **{r.type.replace('_', ' ').title()}** (`{r.request_id}`): {r.status} (Submitted: {sub_date})"
             )

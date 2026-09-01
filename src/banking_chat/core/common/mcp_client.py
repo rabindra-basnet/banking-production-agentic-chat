@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+
 import httpx
 
 from banking_chat.core.common.exceptions import ToolExecutionError
@@ -54,7 +55,7 @@ class StreamableMCPClient:
                     data = resp.json()
                     if "error" in data:
                         raise ToolExecutionError(name, str(data["error"]))
-                    
+
                     # Extract content from MCP result schema
                     result = data.get("result", {})
                     content_blocks = result.get("content", [])

@@ -1,10 +1,11 @@
 """Unit tests for /auth/me session check endpoint."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
+from banking_chat.core.common.types import CustomerTier
 from banking_chat.main import app
 from banking_chat.modules.auth.jwt_validator import JWTValidator
-from banking_chat.core.common.types import CustomerTier
 
 
 @pytest.mark.asyncio

@@ -58,9 +58,7 @@ class PostgresCheckpointer:
             record = result.scalars().first()
 
             # Auto-generate title from first user query
-            first_user_content = next(
-                (m.get("content") for m in messages if m.get("role") == "user"), None
-            )
+            first_user_content = next((m.get("content") for m in messages if m.get("role") == "user"), None)
             derived_title = "New Conversation"
             if first_user_content:
                 clean_text = first_user_content.strip()
@@ -69,7 +67,10 @@ class PostgresCheckpointer:
             if record:
                 record.state_checkpoint = checkpoint_data
                 record.messages = messages
-                if record.title in ("New Conversation", f"Chat {session_id[:8]}") and derived_title != "New Conversation":
+                if (
+                    record.title in ("New Conversation", f"Chat {session_id[:8]}")
+                    and derived_title != "New Conversation"
+                ):
                     record.title = derived_title
             else:
                 new_record = ChatSessionModel(

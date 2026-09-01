@@ -2,9 +2,10 @@
 
 import pytest
 from sqlalchemy import select
-from banking_chat.core.common.token_blacklist import TokenBlacklistManager, RevokedToken
-from banking_chat.core.db.session import get_session_factory, get_engine
+
+from banking_chat.core.common.token_blacklist import RevokedToken, TokenBlacklistManager
 from banking_chat.core.db.base import Base
+from banking_chat.core.db.session import get_engine, get_session_factory
 
 
 @pytest.mark.asyncio

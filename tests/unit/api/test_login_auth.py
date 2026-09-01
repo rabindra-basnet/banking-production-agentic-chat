@@ -1,7 +1,8 @@
 """Unit tests for SSO / Banking Login Flow."""
 
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
+
 from banking_chat.main import app
 
 
