@@ -137,7 +137,9 @@ async def login_endpoint(
 
     auth_logger.info(
         "Customer login successful: customer_id=%s name='%s' tier=%s",
-        matched_customer.customer_id, matched_customer.name, matched_customer.tier,
+        matched_customer.customer_id,
+        matched_customer.name,
+        matched_customer.tier,
     )
 
     # Return access_token directly in response body for in-memory JS client storage
@@ -222,7 +224,7 @@ async def refresh_token_endpoint(
 
     return RefreshResponse(
         access_token=str(result["access_token"]),
-        token_type="Bearer",  # noqa: S106
+        token_type="Bearer",  # noqa: S106  # nosec B106 - OAuth2 scheme constant, not a password
         expires_in=int(result.get("expires_in", 900)),
     )
 
@@ -494,9 +496,7 @@ async def get_chat_history(
     session_id_str = session_id
 
     # Enforce session ownership: a customer may only read their own sessions.
-    record = await memory_manager.checkpointer.get_session_record_by_owner(
-        session_id_str, current_user.customer_id
-    )
+    record = await memory_manager.checkpointer.get_session_record_by_owner(session_id_str, current_user.customer_id)
     if not record:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

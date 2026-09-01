@@ -70,8 +70,11 @@ class TransactionsAgent:
         return "\n".join(lines)
 
     async def get_tool_data(
-        self, user_message: str, user: AuthenticatedUser, **kwargs: Any,
-    ) -> dict | None:
+        self,
+        user_message: str,
+        user: AuthenticatedUser,
+        **kwargs: Any,
+    ) -> dict[str, Any] | None:
         """Return structured tool data for LLM synthesis, or None if no data fetched."""
         lower = user_message.lower()
 

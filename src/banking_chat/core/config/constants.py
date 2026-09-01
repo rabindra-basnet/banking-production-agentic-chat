@@ -25,6 +25,11 @@ CHECKPOINT_INTERVAL = 5  # Checkpoint every N messages
 PII_TOKEN_PREFIX = "{{PII_"
 PII_TOKEN_SUFFIX = "}}"
 
+# NLP Model Paths (presidio AnalyzerEngine / spaCy)
+NLP_MODELS_DIR = "models"
+SPACY_MODEL_LG = "en_core_web_lg"
+SPACY_MODEL_SM = "en_core_web_sm"
+
 # Cost
 DEFAULT_COST_WARNING_THRESHOLD = 0.10
 DEFAULT_COST_HARD_LIMIT = 0.50

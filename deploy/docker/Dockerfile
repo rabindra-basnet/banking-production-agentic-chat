@@ -17,7 +17,13 @@ RUN uv sync --frozen --no-dev --no-editable
 COPY src/ src/
 COPY deploy/docker/gunicorn.yaml ./gunicorn.yaml
 
-# Stage 2: Runtime
+# Stage 2: Model builder - downloads the spaCy NLP model (presidio PII detection)
+FROM python:3.12-slim AS models
+
+# Install the spaCy model into a venv-matching location that presidio can load by name
+RUN pip install --no-cache-dir en_core_web_lg==3.8.0
+
+# Stage 3: Runtime
 FROM python:3.12-slim AS runtime
 
 # Security: run as non-root user
@@ -27,6 +33,9 @@ WORKDIR /app
 
 # Copy installed packages and source
 COPY --from=builder /app /app
+
+# Install model into runtime site-packages so spacy.load('en_core_web_lg') works
+RUN pip install --no-cache-dir en_core_web_lg==3.8.0
 
 # Switch to non-root user
 USER appuser

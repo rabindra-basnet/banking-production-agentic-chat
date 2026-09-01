@@ -38,6 +38,12 @@ htmlcov/
 # Local dev database (SQLite)
 banking_chat_dev.db
 
+# Downloaded NLP models (spaCy for presidio) - fetched via scripts/download_models.sh
+models/
+
+# Local exploration notebooks
+notebooks/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -136,8 +136,11 @@ class ServiceAgent:
         return "\n".join(lines)
 
     async def get_tool_data(
-        self, user_message: str, user: AuthenticatedUser, **kwargs: Any,
-    ) -> dict | None:
+        self,
+        user_message: str,
+        user: AuthenticatedUser,
+        **kwargs: Any,
+    ) -> dict[str, Any] | None:
         """Return structured tool data for LLM synthesis, or None if run() already handles the path."""
         lower = user_message.lower()
 
@@ -148,7 +151,9 @@ class ServiceAgent:
         # Cheque book confirmation / initial prompt — hardcoded multi-turn flow
         history = kwargs.get("history") or []
         last_assistant_msg = next((m.get("content", "") for m in reversed(history) if m.get("role") == "assistant"), "")
-        was_awaiting_cheque_confirmation = "Please confirm the details for your Cheque Book request" in last_assistant_msg
+        was_awaiting_cheque_confirmation = (
+            "Please confirm the details for your Cheque Book request" in last_assistant_msg
+        )
         is_affirmative = any(w in lower for w in ["yes", "confirm", "proceed", "submit", "ok", "sure", "correct"])
         is_cheque_intent = "cheque" in lower or "check book" in lower or "checkbook" in lower
 

@@ -37,7 +37,9 @@ class ConversationMemoryManager:
         record = await self.checkpointer.get_session_record(session_id)
         if record and record.messages:
             messages = record.messages
-            logger.info("History loaded from Postgres for session %s (%d messages, cache warmed)", session_id, len(messages))
+            logger.info(
+                "History loaded from Postgres for session %s (%d messages, cache warmed)", session_id, len(messages)
+            )
             await self.redis_store.save_session(session_id, {"messages": messages})
             return messages
 

@@ -30,7 +30,7 @@ class RedisSessionStore:
         self.env = settings.app_env
         self.redis_url = redis_url or settings.redis_url
         self.ttl_seconds = ttl_seconds or settings.redis_session_ttl_seconds
-        self._client: aioredis.Redis | None = None
+        self._client: aioredis.Redis[Any] | None = None
         self._memory_cache: dict[str, str] = {}
         self._redis_available = True
 
@@ -39,7 +39,7 @@ class RedisSessionStore:
         """In-memory fallback is only permitted outside of production."""
         return self.env != "production"
 
-    async def _get_client(self) -> aioredis.Redis | None:
+    async def _get_client(self) -> aioredis.Redis[Any] | None:
         """Lazy-init Redis client; fall back to in-memory in dev or raise in production."""
         if not self._redis_available:
             return None
@@ -58,7 +58,8 @@ class RedisSessionStore:
                 if not self._fallback_allowed:
                     logger.critical(
                         "Redis unavailable in %s environment (%s). Redis is mandatory for production; shutting down.",
-                        self.env, exc,
+                        self.env,
+                        exc,
                     )
                     raise RedisUnavailableError(
                         f"Redis is required in {self.env} environment but is unreachable: {exc}"
@@ -82,16 +83,15 @@ class RedisSessionStore:
             except Exception as exc:
                 if not self._fallback_allowed:
                     logger.critical("Redis GET failed for session %s in %s: %s", session_id, self.env, exc)
-                    raise RedisUnavailableError(
-                        f"Redis GET failed for session {session_id}: {exc}"
-                    ) from exc
+                    raise RedisUnavailableError(f"Redis GET failed for session {session_id}: {exc}") from exc
                 logger.warning("Redis GET failed for session %s: %s", session_id, exc)
 
         # In-memory fallback
         raw = self._memory_cache.get(f"session:{session_id}")
         if raw is None:
             return None
-        return json.loads(raw)
+        cached: dict[str, Any] = json.loads(raw)
+        return cached
 
     async def save_session(self, session_id: str, data: dict[str, Any]) -> None:
         """Store session state with TTL expiration."""
@@ -104,9 +104,7 @@ class RedisSessionStore:
             except Exception as exc:
                 if not self._fallback_allowed:
                     logger.critical("Redis SETEX failed for session %s in %s: %s", session_id, self.env, exc)
-                    raise RedisUnavailableError(
-                        f"Redis SETEX failed for session {session_id}: {exc}"
-                    ) from exc
+                    raise RedisUnavailableError(f"Redis SETEX failed for session {session_id}: {exc}") from exc
                 logger.warning("Redis SETEX failed for session %s: %s", session_id, exc)
 
         # In-memory fallback
@@ -122,9 +120,7 @@ class RedisSessionStore:
             except Exception as exc:
                 if not self._fallback_allowed:
                     logger.critical("Redis DELETE failed for session %s in %s: %s", session_id, self.env, exc)
-                    raise RedisUnavailableError(
-                        f"Redis DELETE failed for session {session_id}: {exc}"
-                    ) from exc
+                    raise RedisUnavailableError(f"Redis DELETE failed for session {session_id}: {exc}") from exc
                 logger.warning("Redis DELETE failed for session %s: %s", session_id, exc)
 
         self._memory_cache.pop(f"session:{session_id}", None)
@@ -133,5 +129,5 @@ class RedisSessionStore:
         """Gracefully close Redis connection."""
         if self._client is not None:
             with suppress(Exception):
-                await self._client.aclose()
+                await self._client.close()
             self._client = None

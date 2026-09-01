@@ -23,7 +23,11 @@ MODULE_LOG_MAP = {
     "transactions": ["banking_chat.modules.transactions", "banking_chat.mcp.transactions"],
     "services": ["banking_chat.modules.services", "banking_chat.mcp.services"],
     "db": ["sqlalchemy.engine", "banking_chat.core.db"],
-    "llm": ["banking_chat.modules.llm_gateway", "banking_chat.modules.pii_guard", "banking_chat.modules.session_memory.redis"],
+    "llm": [
+        "banking_chat.modules.llm_gateway",
+        "banking_chat.modules.pii_guard",
+        "banking_chat.modules.session_memory.redis",
+    ],
 }
 
 
