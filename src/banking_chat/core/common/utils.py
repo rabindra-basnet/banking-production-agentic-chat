@@ -1,4 +1,4 @@
-"""General utility functions."""
+"""General utility functions for Nepali and global banking contexts."""
 
 from __future__ import annotations
 
@@ -17,18 +17,19 @@ def generate_id() -> UUID:
     return uuid4()
 
 
-def format_currency(amount: float | int | Decimal, currency: str = "INR") -> str:
-    """Format amount as Indian currency string.
+def format_currency(amount: float | int | Decimal, currency: str = "NPR") -> str:
+    """Format amount as Nepali / South Asian currency string (Lakhs & Crores).
 
     Args:
         amount: The amount to format.
-        currency: Currency code.
+        currency: Currency code (default NPR).
 
     Returns:
-        Formatted string like '₹1,23,456.78'.
+        Formatted string like 'Rs. 1,23,456.78' or 'NPR 1,23,456.78'.
     """
+    s = f"{amount:,.2f}"
+    if currency in ("NPR", "NEPALI_RUPEE"):
+        return f"Rs. {s}"
     if currency == "INR":
-        # Indian numbering system (lakhs, crores)
-        s = f"{amount:,.2f}"
         return f"₹{s}"
-    return f"{amount:,.2f} {currency}"
+    return f"{currency} {s}"

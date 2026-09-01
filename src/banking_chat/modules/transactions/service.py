@@ -50,6 +50,7 @@ class TransactionsService:
             transactions = [
                 Transaction(
                     transaction_id=m.transaction_id,
+                    customer_id=m.customer_id,
                     date=m.date,
                     description=m.description,
                     amount=m.amount,

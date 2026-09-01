@@ -1,0 +1,229 @@
+[
+  {
+    "customer_id": "CIF908123",
+    "name": "Rabindra Basnet",
+    "email": "rabindra.basnet@example.com.np",
+    "phone": "+9779841234567",
+    "tier": "standard",
+    "accounts": [
+      {
+        "account_number": "0120100056781234",
+        "account_type": "savings",
+        "balance": 185430.50,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "New Baneshwor Branch, Kathmandu",
+        "ifsc_code": "NIBL0000012"
+      },
+      {
+        "account_number": "0120100056785678",
+        "account_type": "fixed_deposit",
+        "balance": 1000000.00,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "New Baneshwor Branch, Kathmandu",
+        "ifsc_code": "NIBL0000012"
+      }
+    ],
+    "transactions": [
+      {
+        "transaction_id": "TXN-NP-987654321",
+        "account_number": "0120100056781234",
+        "date": "2026-08-30T14:32:00Z",
+        "description": "Fonepay QR / Bhatbhateni Supermarket Naxal",
+        "amount": 4250.00,
+        "type": "debit",
+        "balance_after": 185430.50,
+        "channel": "FONEPAY",
+        "counterparty": "Bhatbhateni Supermarket"
+      },
+      {
+        "transaction_id": "TXN-NP-987654320",
+        "account_number": "0120100056781234",
+        "date": "2026-08-28T09:15:00Z",
+        "description": "Salary Credit - Leapfrog Technology Nepal",
+        "amount": 125000.00,
+        "type": "credit",
+        "balance_after": 189680.50,
+        "channel": "CONNECTIPS",
+        "counterparty": "Leapfrog Technology Nepal"
+      },
+      {
+        "transaction_id": "TXN-NP-987654319",
+        "account_number": "0120100056781234",
+        "date": "2026-08-25T19:40:00Z",
+        "description": "ATM Cash Withdrawal - Thamel ATM 02",
+        "amount": 10000.00,
+        "type": "debit",
+        "balance_after": 64680.50,
+        "channel": "ATM",
+        "counterparty": null
+      },
+      {
+        "transaction_id": "TXN-NP-987654318",
+        "account_number": "0120100056781234",
+        "date": "2026-08-20T11:20:00Z",
+        "description": "ConnectIPS / NEA Electricity Bill Payment",
+        "amount": 1820.00,
+        "type": "debit",
+        "balance_after": 74680.50,
+        "channel": "CONNECTIPS",
+        "counterparty": "Nepal Electricity Authority"
+      },
+      {
+        "transaction_id": "TXN-NP-987654317",
+        "account_number": "0120100056781234",
+        "date": "2026-08-15T16:05:00Z",
+        "description": "eSewa Wallet Load",
+        "amount": 5000.00,
+        "type": "debit",
+        "balance_after": 76500.50,
+        "channel": "ESPEWA",
+        "counterparty": "eSewa Fonepay Pvt Ltd"
+      }
+    ],
+    "service_requests": [
+      {
+        "request_id": "SRV-CHK-78210",
+        "type": "cheque_book",
+        "status": "processing",
+        "submitted_at": "2026-08-29T10:00:00Z",
+        "estimated_completion": "2026-09-02T16:00:00Z",
+        "notes": "25 leaves cheque book for savings account (New Baneshwor Branch)"
+      }
+    ]
+  },
+  {
+    "customer_id": "CIF908456",
+    "name": "Sita Shrestha",
+    "email": "sita.shrestha@example.com.np",
+    "phone": "+9779851098765",
+    "tier": "premium",
+    "accounts": [
+      {
+        "account_number": "0240100088994433",
+        "account_type": "savings",
+        "balance": 645200.00,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "Lakeside Branch, Pokhara",
+        "ifsc_code": "NIBL0000045"
+      },
+      {
+        "account_number": "0240100088997788",
+        "account_type": "current",
+        "balance": 3500000.00,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "Lakeside Branch, Pokhara",
+        "ifsc_code": "NIBL0000045"
+      }
+    ],
+    "transactions": [
+      {
+        "transaction_id": "TXN-NP-776655441",
+        "account_number": "0240100088994433",
+        "date": "2026-08-31T18:22:00Z",
+        "description": "Fonepay / Annapurna Cable Car Tickets",
+        "amount": 2800.00,
+        "type": "debit",
+        "balance_after": 645200.00,
+        "channel": "FONEPAY",
+        "counterparty": "Annapurna Cable Car Pokhara"
+      },
+      {
+        "transaction_id": "TXN-NP-776655440",
+        "account_number": "0240100088994433",
+        "date": "2026-08-30T10:00:00Z",
+        "description": "Interest Capitalization on Remittance Savings Khata",
+        "amount": 18450.00,
+        "type": "credit",
+        "balance_after": 648000.00,
+        "channel": "BRANCH",
+        "counterparty": "Bank Internal Interest"
+      },
+      {
+        "transaction_id": "TXN-NP-776655439",
+        "account_number": "0240100088997788",
+        "date": "2026-08-29T12:30:00Z",
+        "description": "Export Inward Remittance - Himalayan Handicrafts",
+        "amount": 850000.00,
+        "type": "credit",
+        "balance_after": 3500000.00,
+        "channel": "NPI",
+        "counterparty": "Himalayan Handicrafts Trade"
+      }
+    ],
+    "service_requests": [
+      {
+        "request_id": "SRV-BLK-99120",
+        "type": "card_block",
+        "status": "completed",
+        "submitted_at": "2026-08-20T08:30:00Z",
+        "estimated_completion": "2026-08-20T08:31:00Z",
+        "notes": "Emergency block for lost debit card ending in 4433"
+      }
+    ]
+  },
+  {
+    "customer_id": "CIF908999",
+    "name": "Prashant Thapa",
+    "email": "prashant.thapa@example.com.np",
+    "phone": "+9779801234888",
+    "tier": "privileged",
+    "accounts": [
+      {
+        "account_number": "0380100077771122",
+        "account_type": "savings",
+        "balance": 4850000.00,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "Durbar Marg Corporate Branch, Kathmandu",
+        "ifsc_code": "NIBL0000001"
+      },
+      {
+        "account_number": "0380100077773344",
+        "account_type": "fixed_deposit",
+        "balance": 25000000.00,
+        "currency": "NPR",
+        "status": "active",
+        "branch_name": "Durbar Marg Corporate Branch, Kathmandu",
+        "ifsc_code": "NIBL0000001"
+      }
+    ],
+    "transactions": [
+      {
+        "transaction_id": "TXN-NP-998811221",
+        "account_number": "0380100077771122",
+        "date": "2026-08-31T09:00:00Z",
+        "description": "Quarterly Interest Credit on Muddati Khata",
+        "amount": 215000.00,
+        "type": "credit",
+        "balance_after": 4850000.00,
+        "channel": "BRANCH",
+        "counterparty": "Corporate Term Deposit"
+      },
+      {
+        "transaction_id": "TXN-NP-998811220",
+        "account_number": "0380100077771122",
+        "date": "2026-08-27T15:45:00Z",
+        "description": "ConnectIPS / Import Duty Customs Payment",
+        "amount": 650000.00,
+        "type": "debit",
+        "balance_after": 4635000.00,
+        "channel": "CONNECTIPS",
+        "counterparty": "Department of Customs Birgunj"
+      }
+    ],
+    "service_requests": [
+      {
+        "request_id": "SRV-LIM-66231",
+        "type": "credit_limit_increase",
+        "status": "submitted",
+        "submitted_at": "2026-08-30T16:00:00Z",
+        "estimated_completion": "2026-09-03T17:00:00Z",
+        "notes": "Requesting Visa Platinum Credit Card limit increase from Rs. 5,00,000 to Rs. 15,00,000"
+      }
+    ]
+  }
+]

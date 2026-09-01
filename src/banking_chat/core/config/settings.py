@@ -1,4 +1,4 @@
-"""Application settings using Pydantic Settings for environment-based configuration."""
+"""Application settings using Pydantic Settings for multi-tenant SaaS banking configurations."""
 
 from __future__ import annotations
 
@@ -18,12 +18,35 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # ─── Multi-Tenant Banking Brand & SaaS Whitelabel Config ───
+    bank_name: str = Field(default="NepalBank AI", description="Bank/Institution Brand Name")
+    bank_tagline: str = Field(default="Nepal Banking Assistant", description="Bank Brand Tagline")
+    bank_badge: str = Field(default="NRB", description="Regulatory / Institution Badge (e.g. NRB, RBI, MAS)")
+    assistant_name: str = Field(default="NepalBank Assistant", description="Customer-facing Assistant Name")
+    compliance_notice: str = Field(
+        default="Nepal Rastra Bank compliant",
+        description="Regulatory compliance text displayed in greeting",
+    )
+    supported_services: str = Field(
+        default="accounts, Fonepay QR payments, ConnectIPS transfers, or card protection",
+        description="List of supported banking services in welcome message",
+    )
+
     # Application
     app_name: str = Field(default="banking-agentic-chat", description="Application name")
     app_env: str = Field(default="development", description="Environment: development|staging|production")
     app_port: int = Field(default=8000, description="Application port")
     app_log_level: str = Field(default="INFO", description="Logging level")
     app_secret_key: str = Field(default="change-me-in-production", description="Secret key for signing")
+    cors_allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://localhost:8000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:8000",
+        ],
+        description="Explicit allowed CORS origins to prevent Cross-Origin Request Forgery",
+    )
 
     # Authentication & JWT Tokens
     auth_idp_issuer: str = Field(default="https://idp.bank.com/realms/banking", description="IdP issuer URL")
@@ -55,7 +78,7 @@ class Settings(BaseSettings):
     redis_url: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
     redis_session_ttl_seconds: int = Field(default=1800, description="Session TTL (30 min)")
 
-    # PostgreSQL
+    # PostgreSQL / SQLite
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/banking_chat", description="Database URL"
     )

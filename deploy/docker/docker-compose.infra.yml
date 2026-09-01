@@ -1,0 +1,56 @@
+# ==============================================================================
+# 🐘 Infrastructure Docker/Podman Compose (PostgreSQL & Redis Only)
+# Usage:
+#   docker compose -f deploy/docker/docker-compose.infra.yml up -d
+#   podman-compose -f deploy/docker/docker-compose.infra.yml up -d
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: banking_chat_postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-banking_chat}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-banking_chat}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_infra_data:/var/lib/postgresql/data
+    networks:
+      - banking-infra-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: banking_chat_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis_infra_data:/data
+    networks:
+      - banking-infra-net
+
+volumes:
+  postgres_infra_data:
+    driver: local
+  redis_infra_data:
+    driver: local
+
+networks:
+  banking-infra-net:
+    driver: bridge

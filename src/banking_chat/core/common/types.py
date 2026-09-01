@@ -70,22 +70,23 @@ class BankAccount(StrictBaseModel):
     account_number: str = Field(description="Masked account number (last 4 digits visible)")
     account_type: Literal["savings", "current", "fixed_deposit", "recurring_deposit"]
     balance: Decimal = Field(description="Current available balance")
-    currency: str = Field(default="INR", description="Currency code (ISO 4217)")
+    currency: str = Field(default="NPR", description="Currency code (ISO 4217, default NPR)")
     status: Literal["active", "dormant", "frozen", "closed"]
     branch_name: str = Field(description="Branch name")
-    ifsc_code: str = Field(description="IFSC code")
+    ifsc_code: str = Field(default="NIBL0000001", description="Branch routing / Swift / IFSC code")
 
 
 class Transaction(StrictBaseModel):
     """Individual transaction record."""
 
     transaction_id: str = Field(description="Unique transaction reference")
+    customer_id: str | None = Field(default=None, description="Customer CIF who performed/owns the transaction")
     date: datetime = Field(description="Transaction date and time")
     description: str = Field(description="Transaction narration/description")
     amount: Decimal = Field(description="Transaction amount")
     type: Literal["credit", "debit"] = Field(description="Transaction type")
     balance_after: Decimal = Field(description="Balance after transaction")
-    channel: Literal["ATM", "UPI", "NEFT", "RTGS", "IMPS", "POS", "ONLINE", "BRANCH"]
+    channel: Literal["ATM", "FONEPAY", "CONNECTIPS", "NPI", "ESPEWA", "KHALTI", "POS", "ONLINE", "BRANCH", "UPI", "NEFT", "RTGS", "IMPS"]
     counterparty: str | None = Field(default=None, description="Payee/Payer name if available")
 
 
@@ -100,8 +101,22 @@ class ServiceRequest(StrictBaseModel):
         "card_block",
         "credit_limit_increase",
         "statement_request",
-    ]
-    status: Literal["submitted", "processing", "completed", "rejected"]
+    ] = Field(description="Type of service request")
+    status: Literal["submitted", "processing", "completed", "rejected"] = Field(
+        default="submitted", description="Request lifecycle status"
+    )
     submitted_at: datetime = Field(description="Submission timestamp")
-    estimated_completion: datetime | None = Field(default=None, description="Estimated completion")
+    estimated_completion: datetime | None = Field(default=None, description="Estimated completion timestamp")
     notes: str | None = Field(default=None, description="Additional notes")
+
+
+class Customer(StrictBaseModel):
+    """Customer entity representation."""
+
+    customer_id: str = Field(description="Customer CIF number")
+    name: str = Field(description="Full name")
+    email: str = Field(description="Email address")
+    phone: str = Field(description="Phone number")
+    tier: CustomerTier = Field(default=CustomerTier.STANDARD, description="Customer tier")
+    accounts: list[BankAccount] = Field(default_factory=list, description="Linked accounts")
+    created_at: datetime = Field(description="Account creation timestamp")

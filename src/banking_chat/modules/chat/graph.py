@@ -45,8 +45,9 @@ class ChatPipeline:
         # Step 1: PII Redaction & Tokenization
         redaction = self.redactor.tokenize(user_message)
 
-        # Step 2: Route intent
-        target_agent = self.coordinator.route_query(user_message, user)
+        # Step 2: Context Retrieval & Routing Intent
+        past_history = await self.memory_manager.get_history(session_id)
+        target_agent = self.coordinator.route_query(user_message, user, history=past_history)
 
         # Step 3: Execute target domain agent
         agent_resp: str

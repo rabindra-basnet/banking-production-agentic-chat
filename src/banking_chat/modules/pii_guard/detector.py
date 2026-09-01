@@ -1,4 +1,4 @@
-"""PII detection engine combining pattern matchers and Presidio Analyzer."""
+"""PII detection engine combining pattern matchers for Nepali and regional banking."""
 
 from __future__ import annotations
 
@@ -9,11 +9,12 @@ from banking_chat.modules.pii_guard.patterns import (
     AADHAAR_PATTERN,
     ACCOUNT_NUMBER_PATTERN,
     CARD_PATTERN,
+    DIGITAL_WALLET_PATTERN,
     EMAIL_PATTERN,
     IFSC_PATTERN,
+    NEPAL_NID_PATTERN,
     PAN_PATTERN,
     PHONE_PATTERN,
-    UPI_ID_PATTERN,
 )
 
 
@@ -22,10 +23,11 @@ class PIIDetector:
 
     PATTERNS: list[tuple[PIIType, Any, float]] = [
         (PIIType.EMAIL, EMAIL_PATTERN, 0.95),
+        (PIIType.NID, NEPAL_NID_PATTERN, 0.90),
         (PIIType.PAN, PAN_PATTERN, 0.95),
         (PIIType.AADHAAR, AADHAAR_PATTERN, 0.90),
         (PIIType.IFSC, IFSC_PATTERN, 0.90),
-        (PIIType.UPI_ID, UPI_ID_PATTERN, 0.85),
+        (PIIType.UPI_ID, DIGITAL_WALLET_PATTERN, 0.85),
         (PIIType.PHONE, PHONE_PATTERN, 0.85),
         (PIIType.CREDIT_CARD, CARD_PATTERN, 0.90),
         (PIIType.BANK_ACCOUNT, ACCOUNT_NUMBER_PATTERN, 0.70),
@@ -59,12 +61,13 @@ class PIIDetector:
         # Sort entities by start offset
         entities.sort(key=lambda e: e.start)
 
-        counts: dict[str, int] = {}
-        for e in entities:
-            counts[e.entity_type] = counts.get(e.entity_type, 0) + 1
+        # Compute breakdown counts
+        entity_counts: dict[str, int] = {}
+        for entity in entities:
+            entity_counts[entity.entity_type] = entity_counts.get(entity.entity_type, 0) + 1
 
         return PIIDetectionResult(
             has_pii=len(entities) > 0,
             entities=entities,
-            entity_counts=counts,
+            entity_counts=entity_counts,
         )
