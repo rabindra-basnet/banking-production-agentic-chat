@@ -103,3 +103,16 @@ class PostgresCheckpointer:
             stmt = select(ChatSessionModel).where(ChatSessionModel.session_id == session_id)
             result = await session.execute(stmt)
             return result.scalars().first()
+
+    async def get_session_record_by_owner(
+        self, session_id: str, customer_id: str
+    ) -> ChatSessionModel | None:
+        """Fetch a session record only if it belongs to the given customer."""
+        factory = get_session_factory()
+        async with factory() as session:
+            stmt = select(ChatSessionModel).where(
+                ChatSessionModel.session_id == session_id,
+                ChatSessionModel.customer_id == customer_id,
+            )
+            result = await session.execute(stmt)
+            return result.scalars().first()

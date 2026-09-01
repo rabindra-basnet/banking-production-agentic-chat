@@ -25,7 +25,7 @@ export default function App() {
 
   // Backend Synchronized Chat Sessions State
   const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string>(() => crypto.randomUUID());
+  const [activeSessionId, setActiveSessionId] = useState<string>('');
 
   // Load SaaS App Configuration and Validate Session from Backend
   useEffect(() => {

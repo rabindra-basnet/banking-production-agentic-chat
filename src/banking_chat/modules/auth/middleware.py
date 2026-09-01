@@ -49,7 +49,7 @@ async def get_current_user(
 
     jwt_val = validator or JWTValidator()
     try:
-        return jwt_val.validate_token(token)
+        return await jwt_val.validate_token_async(token)
     except TokenExpiredError as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

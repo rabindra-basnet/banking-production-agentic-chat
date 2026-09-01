@@ -25,6 +25,7 @@ from banking_chat.core.config.settings import get_settings
 from banking_chat.core.db.session import close_db_engine, get_engine
 from banking_chat.modules.chat.router import router as chat_router
 from banking_chat.modules.observability.tracing import setup_tracing
+from banking_chat.modules.session_memory.redis_store import RedisSessionStore
 
 logger = logging.getLogger("banking_chat.app")
 
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     yield
 
     await close_db_engine()
+    await RedisSessionStore().close()
 
 
 def create_app() -> FastAPI:

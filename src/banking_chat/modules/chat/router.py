@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+from hashlib import sha256
 from typing import Annotated
 from uuid import uuid4
 
@@ -15,18 +17,15 @@ from fastapi.responses import StreamingResponse
 
 from banking_chat.core.common.exceptions import AuthenticationError, TokenExpiredError
 from banking_chat.core.common.idempotency import IdempotencyManager
-from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
 from banking_chat.core.config.settings import get_settings
 from banking_chat.modules.auth.jwt_validator import JWTValidator
-from banking_chat.modules.auth.middleware import CurrentUser, get_current_user
+from banking_chat.modules.auth.middleware import CurrentUser
 from banking_chat.modules.auth.models import (
     LoginRequest,
     RefreshResponse,
     RefreshTokenRequest,
-    Role,
     TokenResponse,
     UserProfileResponse,
-    UserProfileSchema,
     UserRepository,
 )
 from banking_chat.modules.chat.dependencies import (
@@ -53,6 +52,8 @@ router = APIRouter(tags=["Chat & Authentication"])
 auth_logger = logging.getLogger("banking_chat.modules.auth")
 chat_logger = logging.getLogger("banking_chat.modules.chat")
 
+settings = get_settings()
+
 
 @router.get(
     "/config",
@@ -73,18 +74,6 @@ async def get_app_config() -> AppConfigResponse:
     )
 
 
-# Fallback user profile if database entry is not yet populated
-FALLBACK_USER = UserProfileSchema(
-    customer_id="CIF908123",
-    name="Rabindra Basnet",
-    email="rabindra.basnet@example.com.np",
-    role=Role.CUSTOMER,
-    tier=CustomerTier.STANDARD,
-    accounts=["0120100056781234 (Savings Khata)", "0120100056785678 (Muddati Khata)"],
-    password="password123",  # noqa: S106
-)
-
-
 @router.post(
     "/auth/login",
     response_model=TokenResponse,
@@ -98,15 +87,32 @@ async def login_endpoint(
 ) -> TokenResponse:
     """Real system SSO / Banking Login handler. Sets secure access & refresh tokens in HttpOnly cookies."""
     username = payload.username.strip()
+    plain_password = payload.password
 
     # Query customer from PostgreSQL / SQLite Users Database Table
     matched_customer = await UserRepository.get_by_identifier_or_email(username)
 
-    if not matched_customer:
-        if username.lower() == "admin":
-            matched_customer = await UserRepository.get_by_customer_id("CIF908999")
-        if not matched_customer:
-            matched_customer = await UserRepository.get_by_customer_id("CIF908123") or FALLBACK_USER
+    if not matched_customer and username.lower() == "admin":
+        matched_customer = await UserRepository.get_by_customer_id("CIF908999")
+
+    # Verify the presented password against the stored credential hash.
+    # Constant-time comparison to reduce timing side-channels.
+    password_valid = False
+    if matched_customer is not None and matched_customer.password:
+        stored_hash = matched_customer.password.encode("utf-8")
+        presented_hash = sha256(plain_password.encode("utf-8")).hexdigest().encode("utf-8")
+        password_valid = hmac.compare_digest(presented_hash, stored_hash)
+
+    if not matched_customer or not password_valid:
+        auth_logger.warning(
+            "Login failed for identifier='%s': %s",
+            username,
+            "user not found" if not matched_customer else "invalid password",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials.",
+        )
 
     pair = validator.create_token_pair(
         customer_id=matched_customer.customer_id,
@@ -116,19 +122,22 @@ async def login_endpoint(
         accounts=[acc.split(" ")[0] for acc in matched_customer.accounts],
     )
 
+    _is_secure = settings.app_env == "production"
+
     # Set refresh token in Secure SameSite Cookie (Isolated to auth refresh path)
     response.set_cookie(
         key="refresh_token",
         value=pair["refresh_token"],
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=_is_secure,
         max_age=7 * 86400,
         path="/api/v1/auth",
     )
 
     auth_logger.info(
-        f"Customer login successful: customer_id={matched_customer.customer_id} name='{matched_customer.name}' tier={matched_customer.tier}"
+        "Customer login successful: customer_id=%s name='%s' tier=%s",
+        matched_customer.customer_id, matched_customer.name, matched_customer.tier,
     )
 
     # Return access_token directly in response body for in-memory JS client storage
@@ -154,7 +163,12 @@ async def get_current_user_profile(
     current_user: CurrentUser,
 ) -> UserProfileResponse:
     """Validate current session from in-memory token and return customer profile directly from Users database table."""
-    user_info = await UserRepository.get_by_customer_id(current_user.customer_id) or FALLBACK_USER
+    user_info = await UserRepository.get_by_customer_id(current_user.customer_id)
+    if not user_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found in database.",
+        )
     return UserProfileResponse(
         customer_id=current_user.customer_id,
         name=current_user.name,
@@ -187,19 +201,21 @@ async def refresh_token_endpoint(
         )
 
     try:
-        result = validator.refresh_access_token(refresh_token)
+        result = await validator.refresh_access_token_async(refresh_token)
     except (AuthenticationError, TokenExpiredError) as err:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(err),
         ) from err
 
+    _is_secure = settings.app_env == "production"
+
     response.set_cookie(
         key="refresh_token",
         value=str(result["refresh_token"]),
         httponly=True,
         samesite="lax",
-        secure=False,
+        secure=_is_secure,
         max_age=7 * 86400,
         path="/api/v1/auth",
     )
@@ -255,7 +271,12 @@ async def demo_token_endpoint(
     tier: str = "standard",
 ) -> TokenResponse:
     """Generate mock demo credentials for testing."""
-    user_info = await UserRepository.get_by_customer_id(customer_id) or FALLBACK_USER
+    user_info = await UserRepository.get_by_customer_id(customer_id)
+    if not user_info:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Demo user not found in database.",
+        )
 
     return TokenResponse(
         customer_id=user_info.customer_id,
@@ -466,19 +487,26 @@ async def delete_chat_session(
 )
 async def get_chat_history(
     session_id: str,
-    _current_user: AuthenticatedUser = Depends(get_current_user),
+    current_user: CurrentUser,
     memory_manager: ConversationMemoryManager = Depends(get_memory_manager),
 ) -> ConversationHistoryResponse:
-    """Fetch past conversation messages for the current session from database or Redis."""
+    """Fetch past conversation messages for a session owned by the authenticated customer."""
     session_id_str = session_id
-    raw_history = await memory_manager.get_history(session_id_str)
-    title = "New Conversation"
 
+    # Enforce session ownership: a customer may only read their own sessions.
+    record = await memory_manager.checkpointer.get_session_record_by_owner(
+        session_id_str, current_user.customer_id
+    )
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Chat session not found.",
+        )
+
+    raw_history = await memory_manager.get_history(session_id_str)
+    title = record.title
     if not raw_history:
-        record = await memory_manager.checkpointer.get_session_record(session_id_str)
-        if record and record.messages:
-            raw_history = record.messages
-            title = record.title
+        raw_history = record.messages
 
     messages = [
         ChatMessage(

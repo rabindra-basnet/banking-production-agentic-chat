@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+
 from banking_chat.core.common.exceptions import PIILeakageError
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
 from banking_chat.modules.llm_gateway.cost_tracker import CostTracker
 from banking_chat.modules.llm_gateway.self_hosted import SelfHostedLLMClient
 from banking_chat.modules.llm_gateway.third_party import ThirdPartyLLMClient
 from banking_chat.modules.pii_guard.detector import PIIDetector
+
+llm_logger = logging.getLogger("banking_chat.modules.llm_gateway")
 
 
 class LLMRouter:
@@ -36,16 +40,28 @@ class LLMRouter:
         combined_text = " ".join(m.get("content", "") for m in messages)
         pii_result = self.detector.detect(combined_text)
 
+        llm_logger.info(
+            "[LLM_GATEWAY] customer=%s | Incoming prompt messages=%d | PII detected=%s",
+            user.customer_id, len(messages), pii_result.has_pii,
+        )
+        for idx, msg in enumerate(messages):
+            llm_logger.info("[LLM_GATEWAY] message[%d] role=%s | content=%s", idx, msg.get("role"), msg.get("content"))
+
         # Step 2: Routing policy
         # If PII is detected, MUST use self-hosted on-premise model to prevent cloud data leakage
         if pii_result.has_pii:
             res = await self.self_hosted.generate(messages)
+            model = self.self_hosted.model
             cost = self.cost_tracker.record_usage(
-                self.self_hosted.model,
+                model,
                 res.get("usage", {}).get("prompt_tokens", 0),
                 res.get("usage", {}).get("completion_tokens", 0),
             )
             content: str = res["choices"][0]["message"]["content"]
+            llm_logger.info(
+                "[LLM_GATEWAY] customer=%s | Routed to self_hosted model=%s | cost=%.6f | response=%s",
+                user.customer_id, model, cost, content,
+            )
             return content, cost
 
         # For privileged/premium users without PII or if cloud requested, use Third-Party
@@ -55,20 +71,30 @@ class LLMRouter:
                 raise PIILeakageError(list(pii_result.entity_counts.keys()))
 
             res = await self.third_party.generate(messages)
+            model = self.third_party.model
             cost = self.cost_tracker.record_usage(
-                self.third_party.model,
+                model,
                 res.get("usage", {}).get("prompt_tokens", 0),
                 res.get("usage", {}).get("completion_tokens", 0),
             )
             content = res["choices"][0]["message"]["content"]
+            llm_logger.info(
+                "[LLM_GATEWAY] customer=%s | Routed to third_party model=%s | cost=%.6f | response=%s",
+                user.customer_id, model, cost, content,
+            )
             return content, cost
 
         # Standard tier or default uses self-hosted
         res = await self.self_hosted.generate(messages)
+        model = self.self_hosted.model
         cost = self.cost_tracker.record_usage(
-            self.self_hosted.model,
+            model,
             res.get("usage", {}).get("prompt_tokens", 0),
             res.get("usage", {}).get("completion_tokens", 0),
         )
         content = res["choices"][0]["message"]["content"]
+        llm_logger.info(
+            "[LLM_GATEWAY] customer=%s | Routed to self_hosted model=%s | cost=%.6f | response=%s",
+            user.customer_id, model, cost, content,
+        )
         return content, cost

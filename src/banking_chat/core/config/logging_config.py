@@ -18,12 +18,12 @@ DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 MODULE_LOG_MAP = {
     "access": ["banking_chat.access"],
     "auth": ["banking_chat.modules.auth", "banking_chat.security"],
-    "chat": ["banking_chat.modules.chat"],
+    "chat": ["banking_chat.modules.chat", "banking_chat.modules.session_memory"],
     "accounts": ["banking_chat.modules.accounts", "banking_chat.mcp.accounts"],
     "transactions": ["banking_chat.modules.transactions", "banking_chat.mcp.transactions"],
     "services": ["banking_chat.modules.services", "banking_chat.mcp.services"],
     "db": ["sqlalchemy.engine", "banking_chat.core.db"],
-    "llm": ["banking_chat.modules.llm_gateway", "banking_chat.modules.pii_guard"],
+    "llm": ["banking_chat.modules.llm_gateway", "banking_chat.modules.pii_guard", "banking_chat.modules.session_memory.redis"],
 }
 
 

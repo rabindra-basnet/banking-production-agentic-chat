@@ -116,6 +116,17 @@ class JWTValidator:
         if self.blacklist_mgr.is_blacklisted_sync(refresh_token):
             raise AuthenticationError("Refresh token has been revoked / blacklisted.")
 
+        return self._rotate_refresh_token(refresh_token)
+
+    async def refresh_access_token_async(self, refresh_token: str) -> TokenPairDict:
+        """Validate a refresh token (DB-aware blacklist) and issue a new access token pair."""
+        if await self.blacklist_mgr.is_blacklisted(refresh_token):
+            raise AuthenticationError("Refresh token has been revoked / blacklisted.")
+
+        return self._rotate_refresh_token(refresh_token)
+
+    def _rotate_refresh_token(self, refresh_token: str) -> TokenPairDict:
+        """Shared refresh-token decode and rotation logic."""
         try:
             payload = jwt.decode(
                 refresh_token,
@@ -139,12 +150,24 @@ class JWTValidator:
             accounts=payload.get("accounts", []),
         )
 
+    async def validate_token_async(self, token: str) -> AuthenticatedUser:
+        """Validate JWT access token against persistent blacklist and return AuthenticatedUser."""
+        # 1. Check blacklist (memory + persistent DB across workers)
+        if await self.blacklist_mgr.is_blacklisted(token):
+            raise AuthenticationError("Access token has been revoked / logged out.")
+
+        return self._decode_access_token(token)
+
     def validate_token(self, token: str) -> AuthenticatedUser:
-        """Validate JWT access token and return AuthenticatedUser."""
+        """Validate JWT access token and return AuthenticatedUser (sync, memory blacklist)."""
         # 1. Check blacklist
         if self.blacklist_mgr.is_blacklisted_sync(token):
             raise AuthenticationError("Access token has been revoked / logged out.")
 
+        return self._decode_access_token(token)
+
+    def _decode_access_token(self, token: str) -> AuthenticatedUser:
+        """Shared access-token decode and AuthenticatedUser construction."""
         try:
             payload_dict = jwt.decode(
                 token,
