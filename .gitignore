@@ -35,6 +35,9 @@ htmlcov/
 # Security
 .secrets.baseline
 
+# Local dev database (SQLite)
+banking_chat_dev.db
+
 # OS
 .DS_Store
 Thumbs.db

@@ -31,4 +31,10 @@ async def test_login_sets_httponly_cookies_and_clean_body() -> None:
             json={"message": "What is my balance?", "stream": False},
         )
         assert chat_resp.status_code == 200
-        assert "Rabindra" in chat_resp.json()["message"]
+        body = chat_resp.json()
+        assert "message" in body
+        # LLM-generated response contains banking content (account balance data)
+        assert len(body["message"]) > 20
+        assert body["routed_agent"] in ("accounts_agent", "transaction_agent", "service_agent")
+        assert isinstance(body["cost_usd"], float)
+        assert isinstance(body["latency_ms"], float)

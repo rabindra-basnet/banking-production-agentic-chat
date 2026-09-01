@@ -134,3 +134,39 @@ class ServiceAgent:
             )
 
         return "\n".join(lines)
+
+    async def get_tool_data(
+        self, user_message: str, user: AuthenticatedUser, **kwargs: Any,
+    ) -> dict | None:
+        """Return structured tool data for LLM synthesis, or None if run() already handles the path."""
+        lower = user_message.lower()
+
+        # Card block — always a hardcoded confirmation; no LLM synthesis
+        if "block" in lower and ("card" in lower or "debit" in lower or "credit" in lower):
+            return None
+
+        # Cheque book confirmation / initial prompt — hardcoded multi-turn flow
+        history = kwargs.get("history") or []
+        last_assistant_msg = next((m.get("content", "") for m in reversed(history) if m.get("role") == "assistant"), "")
+        was_awaiting_cheque_confirmation = "Please confirm the details for your Cheque Book request" in last_assistant_msg
+        is_affirmative = any(w in lower for w in ["yes", "confirm", "proceed", "submit", "ok", "sure", "correct"])
+        is_cheque_intent = "cheque" in lower or "check book" in lower or "checkbook" in lower
+
+        if was_awaiting_cheque_confirmation and is_affirmative:
+            return None
+        if is_cheque_intent:
+            return None
+
+        # Service requests list — data to be synthesized by LLM
+        try:
+            req_list = await self.tools.get_service_requests(user.customer_id)
+        except Exception:
+            req_list = await self.service.get_service_requests(user.customer_id)
+
+        if not req_list.requests:
+            return None
+
+        return {
+            "customer_name": user.name,
+            "requests": [r.model_dump() for r in req_list.requests],
+        }

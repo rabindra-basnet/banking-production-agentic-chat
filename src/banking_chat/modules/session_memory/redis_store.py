@@ -1,4 +1,4 @@
-"""Redis-backed session cache with in-memory fallback."""
+"""Redis-backed session cache with in-memory fallback (dev only)."""
 
 from __future__ import annotations
 
@@ -14,19 +14,33 @@ from banking_chat.core.config.settings import get_settings
 logger = logging.getLogger("banking_chat.modules.session_memory.redis")
 
 
+class RedisUnavailableError(RuntimeError):
+    """Raised when a mandatory production dependency (Redis) is unreachable."""
+
+
 class RedisSessionStore:
-    """Fast cache for active conversation states and session tokens backed by real Redis."""
+    """Fast cache for active conversation states and session tokens backed by real Redis.
+
+    In development, falls back to an in-memory cache when Redis is offline.
+    In production, Redis is mandatory: startup and runtime failures are fatal.
+    """
 
     def __init__(self, redis_url: str | None = None, ttl_seconds: int | None = None) -> None:
         settings = get_settings()
+        self.env = settings.app_env
         self.redis_url = redis_url or settings.redis_url
         self.ttl_seconds = ttl_seconds or settings.redis_session_ttl_seconds
         self._client: aioredis.Redis | None = None
         self._memory_cache: dict[str, str] = {}
         self._redis_available = True
 
+    @property
+    def _fallback_allowed(self) -> bool:
+        """In-memory fallback is only permitted outside of production."""
+        return self.env != "production"
+
     async def _get_client(self) -> aioredis.Redis | None:
-        """Lazy-init Redis client; return None if connection fails."""
+        """Lazy-init Redis client; fall back to in-memory in dev or raise in production."""
         if not self._redis_available:
             return None
         if self._client is None:
@@ -41,6 +55,14 @@ class RedisSessionStore:
                 await self._client.ping()
                 logger.info("Redis connection established: %s", self.redis_url)
             except Exception as exc:
+                if not self._fallback_allowed:
+                    logger.critical(
+                        "Redis unavailable in %s environment (%s). Redis is mandatory for production; shutting down.",
+                        self.env, exc,
+                    )
+                    raise RedisUnavailableError(
+                        f"Redis is required in {self.env} environment but is unreachable: {exc}"
+                    ) from exc
                 logger.warning("Redis unavailable (%s), falling back to in-memory cache", exc)
                 self._redis_available = False
                 self._client = None
@@ -58,6 +80,11 @@ class RedisSessionStore:
                 data: dict[str, Any] = json.loads(raw)
                 return data
             except Exception as exc:
+                if not self._fallback_allowed:
+                    logger.critical("Redis GET failed for session %s in %s: %s", session_id, self.env, exc)
+                    raise RedisUnavailableError(
+                        f"Redis GET failed for session {session_id}: {exc}"
+                    ) from exc
                 logger.warning("Redis GET failed for session %s: %s", session_id, exc)
 
         # In-memory fallback
@@ -75,6 +102,11 @@ class RedisSessionStore:
                 await client.setex(f"session:{session_id}", self.ttl_seconds, payload)
                 return
             except Exception as exc:
+                if not self._fallback_allowed:
+                    logger.critical("Redis SETEX failed for session %s in %s: %s", session_id, self.env, exc)
+                    raise RedisUnavailableError(
+                        f"Redis SETEX failed for session {session_id}: {exc}"
+                    ) from exc
                 logger.warning("Redis SETEX failed for session %s: %s", session_id, exc)
 
         # In-memory fallback
@@ -88,6 +120,11 @@ class RedisSessionStore:
                 await client.delete(f"session:{session_id}")
                 return
             except Exception as exc:
+                if not self._fallback_allowed:
+                    logger.critical("Redis DELETE failed for session %s in %s: %s", session_id, self.env, exc)
+                    raise RedisUnavailableError(
+                        f"Redis DELETE failed for session {session_id}: {exc}"
+                    ) from exc
                 logger.warning("Redis DELETE failed for session %s: %s", session_id, exc)
 
         self._memory_cache.pop(f"session:{session_id}", None)

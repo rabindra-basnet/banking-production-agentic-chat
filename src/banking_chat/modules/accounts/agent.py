@@ -136,3 +136,41 @@ class AccountsAgent:
             f'- 🚨 **Card blocking** — *"Block my card ending in 5678"*\n\n'
             f"Please try one of these, or type **help** for more details."
         )
+
+    async def get_tool_data(
+        self, user_message: str, user: AuthenticatedUser, **kwargs: Any,
+    ) -> dict | None:
+        """Return structured tool data for LLM synthesis, or None if run() already has a definitive answer."""
+        lower_msg = user_message.lower().strip()
+
+        if _INJECTION_PATTERNS.search(user_message):
+            return None
+
+        if any(w in lower_msg for w in ["who are you", "what is your name", "what can you do", "help"]):
+            return None
+        if lower_msg in ("hello", "hi", "namaste", "hey", "good morning", "good evening"):
+            return None
+
+        # Summary
+        if "summary" in lower_msg or "total" in lower_msg or ("all" in lower_msg and "account" in lower_msg):
+            try:
+                summary = await self.tools.get_account_summary(user.customer_id)
+            except Exception:
+                summary = await self.service.get_account_summary(user.customer_id)
+            return summary.model_dump()
+
+        # Account list
+        has_accounts_intent = any(kw in lower_msg for kw in _ACCOUNTS_INTENT_KEYWORDS)
+        if has_accounts_intent:
+            try:
+                acc_list = await self.tools.get_accounts(user.customer_id)
+            except Exception:
+                acc_list = await self.service.get_accounts_by_customer(user.customer_id)
+            if not acc_list.accounts:
+                return None
+            return {
+                "customer_name": user.name,
+                "accounts": [acc.model_dump() for acc in acc_list.accounts],
+            }
+
+        return None

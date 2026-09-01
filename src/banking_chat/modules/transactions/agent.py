@@ -68,3 +68,36 @@ class TransactionsAgent:
             lines.append(f"- **{dt_str}**: {t.description} | `{sign}{amt}` [{t.channel}]")
 
         return "\n".join(lines)
+
+    async def get_tool_data(
+        self, user_message: str, user: AuthenticatedUser, **kwargs: Any,
+    ) -> dict | None:
+        """Return structured tool data for LLM synthesis, or None if no data fetched."""
+        lower = user_message.lower()
+
+        if "spending" in lower or "summary" in lower or "breakdown" in lower:
+            try:
+                summary = await self.tools.get_spending_summary(user.customer_id, days=30)
+            except Exception:
+                summary = await self.service.get_spending_summary(user.customer_id, days=30)
+            return {"customer_name": user.name, "summary": summary.model_dump()}
+
+        limit = 5
+        query = TransactionQueryRequest(limit=limit)
+        if "credit" in lower or "salary" in lower or "received" in lower:
+            query.transaction_type = "credit"
+        elif "debit" in lower or "spent" in lower:
+            query.transaction_type = "debit"
+
+        try:
+            result = await self.tools.get_transactions(user.customer_id, query)
+        except Exception:
+            result = await self.service.get_transactions(user.customer_id, query)
+
+        if not result.transactions:
+            return None
+
+        return {
+            "customer_name": user.name,
+            "transactions": [t.model_dump() for t in result.transactions],
+        }

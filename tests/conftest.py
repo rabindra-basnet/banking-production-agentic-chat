@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from sqlalchemy import select
 
 from banking_chat.core.common.types import AuthenticatedUser, CustomerTier
 from banking_chat.core.db.base import Base
@@ -62,7 +63,7 @@ def privileged_user() -> AuthenticatedUser:
 
 
 def _seed_test_users() -> None:
-    """Create database schema and seed the auth test users from seed_banking_data.json."""
+    """Create database schema and seed the auth test users from seed_banking_data.json (idempotent)."""
     engine = get_engine()
 
     async def _setup() -> None:
@@ -80,15 +81,19 @@ def _seed_test_users() -> None:
         async with factory() as session:
             hashed = sha256(b"password123").hexdigest()
             for cust in customers:
+                cid = cust["customer_id"]
+                exists = await session.execute(select(UserModel).where(UserModel.customer_id == cid))
+                if exists.scalar_one_or_none() is not None:
+                    continue
                 accounts = [
                     f"{acc['account_number']} ({acc['account_type'].replace('_', ' ').title()} Khata)"
                     for acc in cust.get("accounts", [])
                 ]
                 user = UserModel(
                     id=uuid4(),
-                    customer_id=cust["customer_id"],
+                    customer_id=cid,
                     name=cust.get("name", "Customer"),
-                    email=cust.get("email", f"{cust['customer_id']}@example.com"),
+                    email=cust.get("email", f"{cid}@example.com"),
                     role=Role.CUSTOMER,
                     tier=cust.get("tier", CustomerTier.STANDARD),
                     accounts_json=json.dumps(accounts),
